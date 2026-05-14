@@ -36,9 +36,7 @@
   html, body { background: var(--color-background-primary); color: var(--color-text-primary); font-family: system-ui, -apple-system, sans-serif; min-height: 100vh; }
   #root { padding: 0 24px; max-width: 900px; margin: 0 auto; }
   * { -webkit-font-smoothing: antialiased; }
-  a { color: inherit; }
-  button { font-family: inherit; }
-  code, pre { font-family: ui-monospace, "SF Mono", "Cascadia Code", monospace; }
+  a { color: inherit; } button { font-family: inherit; } code, pre { font-family: ui-monospace, "SF Mono", monospace; }
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--color-border-secondary); border-radius: 3px; }
@@ -49,89 +47,10 @@
 <script type="text/babel">
 const { useState, useEffect } = React;
 
-const README_CONTENT = `# LPD Analysis — pyRevit Script
-## Installation
-
-1. Copy the **entire** \`LPD_Analysis.pushbutton\` folder and \`LPD_Analysis_Template.xlsx\`
-   into your firm's pyRevit extension panel directory, e.g.:
-   \`\`\`
-   %APPDATA%\\pyRevit-Master\\extensions\\YourFirm.extension\\YourPanel.panel\\
-   \`\`\`
-2. Reload pyRevit (pyRevit tab → Reload).
-3. The **LPD Analysis** button will appear in your panel.
-
-## First-Time Setup
-- \`LPD_Analysis_Template.xlsx\` **must live in the same folder** as \`script.py\`.
-- If openpyxl is not installed, run: pip install openpyxl
-
-## Usage
-
-1. Open your **MEP/Electrical host model** with the architectural link loaded.
-2. Click the **LPD Analysis** button.
-3. If multiple links are loaded, select the architectural model containing the rooms.
-4. Choose a save location for the output \`.xlsx\` file.
-
-## Output Workbook
-
-| Tab | Purpose |
-|---|---|
-| IESNA_LPD_Reference | LPD allowances by area type |
-| LPD_Schedule | One row per fixture type per room |
-| Summary | Aggregated LPD by area type + whole building |
-
-## Flags
-
-| Flag | Meaning |
-|---|---|
-| ⚠ Missing Type Mark | Fixture has no type mark |
-| ⚠ Wattage Missing | No wattage found on fixture |
-| ⚠ Wattage = 0 | Wattage is zero — needs population |
-| ⚠ Wattage High | Wattage exceeds 500W — verify |
-
-## Future Enhancements
-- [ ] COMcheck .ccx export
-- [ ] Sustainability report export
-- [ ] Support for fixtures in linked models`;
-
-const CONTEXT_CONTENT = `# LPD Analysis Tool — Project Context
-**Platform:** Autodesk Revit 2024+ via pyRevit (IronPython)
-**Standard:** ASHRAE 90.1-2019 Table 9.6.1 Space-by-Space Method
-**Status:** Production — confirmed working in real projects
-
-## What This Tool Does
-
-Automates the ASHRAE 90.1-2019 LPD compliance workflow. Without this tool the process is entirely manual: extract room data, look up LPD allowances, count fixtures, calculate wattages, build the schedule, compare to allowables. On a mid-size project this takes hours. The tool does it in seconds.
-
-## Execution Flow
-
-**Step 1 — Link selection:** Collects all RevitLinkInstance objects. Auto-selects if one; prompts via SelectFromList if multiple.
-
-**Step 2 — Room collection:** OST_Rooms first, fallback to OST_MEPSpaces. Skips Area = 0.
-
-**Step 3 — Fixture collection:** OST_LightingFixtures from host model. Excludes exit, emergency, battery pack families.
-
-**Step 4 — Point-in-room:** Gets fixture Location.Point → applies inverse link transform → drops to Z=0 → tests against every room.
-
-**Step 5 — Build rows:** Assembles: room #, name, area, IESNA match, Type Mark, Family Name, Type Name, count, wattage.
-
-**Step 6 — Excel injection:** Reads template as ZIP → patches sheet XMLs directly → writes output. Drops calcChain.xml. No openpyxl write path.
-
-## Known Issues
-
-- Families without Apparent Power / Power Factor → blank wattage + flag
-- Hybrid room numbering (1A-101) may sort unexpectedly
-- After dropdown change, some cells need Ctrl+Alt+F9 for full recalc
-
-## Planned
-
-- COMcheck .ccx export
-- Wattage parameter standardization script
-- Sustainability committee report format`;
-
 const P = {
   name: "LPD Analysis", emoji: "💡",
   tagline: "ASHRAE 90.1-2019 lighting power density compliance — automated.",
-  status: "Production", statusColor: "#1D9E75",
+  status: "Production", statusColor: "#1D9E75", statusBg: "#0F6E5620",
   category: ["BIMBridge", "Revit Native", "Schedule Extraction"],
   githubUrl: "https://github.com/bradlittlefield/bimbridge/tree/main/revit/BIMBridge.extension/BIMBridge.tab/Lighting.panel/LPD_Analysis.pushbutton",
   githubFolder: "revit/.../Lighting.panel/LPD_Analysis.pushbutton",
@@ -144,7 +63,7 @@ const P = {
     { name: "LPD_Analysis_Context.md", size: "14 KB", role: "Deep technical context doc", lastCommit: "2026-05-13", commitMsg: "Move to canonical extension folder", url: "https://github.com/bradlittlefield/bimbridge/blob/main/revit/BIMBridge.extension/BIMBridge.tab/Lighting.panel/LPD_Analysis.pushbutton/LPD_Analysis_Context.md" },
     { name: "README.md", size: "2.7 KB", role: "Installation, usage, flags reference", lastCommit: "2026-05-12", commitMsg: "Update via Drive sync", url: "https://github.com/bradlittlefield/bimbridge/blob/main/revit/BIMBridge.extension/BIMBridge.tab/Lighting.panel/LPD_Analysis.pushbutton/README.md" },
     { name: "update_script.bat", size: "209 B", role: "Pulls latest script.py without full pyRevit reload", lastCommit: "2026-05-12", commitMsg: "Update via Drive sync", url: "https://github.com/bradlittlefield/bimbridge/blob/main/revit/BIMBridge.extension/BIMBridge.tab/Lighting.panel/LPD_Analysis.pushbutton/update_script.bat" },
-    { name: "icon.png / icon.dark.png", size: "~1.8 KB", role: "Ribbon button icons", lastCommit: "—", commitMsg: "—", url: "https://github.com/bradlittlefield/bimbridge/tree/main/revit/BIMBridge.extension/BIMBridge.tab/Lighting.panel/LPD_Analysis.pushbutton" },
+    { name: "icon.png / icon.dark.png", size: "~1.8 KB", role: "Ribbon button icons (light + dark)", lastCommit: "—", commitMsg: "—", url: "https://github.com/bradlittlefield/bimbridge/tree/main/revit/BIMBridge.extension/BIMBridge.tab/Lighting.panel/LPD_Analysis.pushbutton" },
   ],
   execSteps: [
     { n: 1, label: "Link select", detail: "Collects all RevitLinkInstance objects. Auto-selects if one link; prompts via SelectFromList if multiple. Extracts link doc + total transform.", color: "#185FA5", fill: "#B5D4F4" },
@@ -186,24 +105,6 @@ function Collapse({ title, icon, badge, defaultOpen = false, children }) {
       {open && <div style={{ borderTop: "0.5px solid var(--color-border-tertiary)" }}>{children}</div>}
     </div>
   );
-}
-
-function MD({ src }) {
-  const lines = src.split("\n"); const els = []; let i = 0;
-  while (i < lines.length) {
-    const l = lines[i];
-    if (l.startsWith("# ")) els.push(<h1 key={i} style={{ fontSize: 16, fontWeight: 700, margin: "16px 0 6px", color: "var(--color-text-primary)" }}>{l.slice(2)}</h1>);
-    else if (l.startsWith("## ")) els.push(<h2 key={i} style={{ fontSize: 14, fontWeight: 600, margin: "14px 0 5px", color: "var(--color-text-primary)", borderBottom: "0.5px solid var(--color-border-tertiary)", paddingBottom: 4 }}>{l.slice(3)}</h2>);
-    else if (l.startsWith("### ")) els.push(<h3 key={i} style={{ fontSize: 13, fontWeight: 600, margin: "12px 0 4px", color: "var(--color-text-primary)" }}>{l.slice(4)}</h3>);
-    else if (l.startsWith("- [ ] ") || l.startsWith("- [x] ")) { const done = l.startsWith("- [x] "); els.push(<div key={i} style={{ display: "flex", alignItems: "center", gap: 8, margin: "3px 0", fontSize: 12 }}><span style={{ width: 12, height: 12, border: `1.5px solid ${done ? "#1D9E75" : "var(--color-border-secondary)"}`, borderRadius: 3, background: done ? "#1D9E75" : "transparent", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{done && <span style={{ color: "#fff", fontSize: 8 }}>✓</span>}</span><span style={{ color: "var(--color-text-primary)" }}>{l.slice(6)}</span></div>); }
-    else if (l.startsWith("- ")) els.push(<div key={i} style={{ display: "flex", gap: 8, margin: "2px 0", fontSize: 12 }}><span style={{ color: "var(--color-text-secondary)", flexShrink: 0 }}>·</span><span style={{ color: "var(--color-text-primary)", lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: l.slice(2).replace(/`([^`]+)`/g, '<code style="background:var(--color-background-tertiary);padding:1px 4px;border-radius:3px;font-size:10px">$1</code>') }} /></div>);
-    else if (l.startsWith("```")) { const code = []; i++; while (i < lines.length && !lines[i].startsWith("```")) { code.push(lines[i]); i++; } els.push(<pre key={`c${i}`} style={{ background: "var(--color-background-tertiary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: 6, padding: "10px 14px", fontSize: 11, overflowX: "auto", margin: "8px 0", lineHeight: 1.6 }}><code>{code.join("\n")}</code></pre>); }
-    else if (l.startsWith("| ")) { const rows = []; while (i < lines.length && lines[i].startsWith("|")) { rows.push(lines[i]); i++; } const heads = rows[0].split("|").filter(c => c.trim()).map(c => c.trim()); const body = rows.slice(2).map(r => r.split("|").filter(c => c.trim()).map(c => c.trim())); els.push(<div key={`t${i}`} style={{ overflowX: "auto", margin: "8px 0" }}><table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}><thead><tr>{heads.map((h, j) => <th key={j} style={{ textAlign: "left", padding: "5px 8px", borderBottom: "1px solid var(--color-border-secondary)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: "var(--color-text-secondary)" }}>{h}</th>)}</tr></thead><tbody>{body.map((r, j) => <tr key={j} style={{ borderBottom: "0.5px solid var(--color-border-tertiary)" }}>{r.map((c, k) => <td key={k} style={{ padding: "5px 8px", fontSize: 12, color: "var(--color-text-primary)" }}>{c}</td>)}</tr>)}</tbody></table></div>); continue; }
-    else if (l.trim() === "---") els.push(<hr key={i} style={{ border: "none", borderTop: "0.5px solid var(--color-border-tertiary)", margin: "12px 0" }} />);
-    else if (l.trim()) { const html = l.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>").replace(/`([^`]+)`/g, '<code style="background:var(--color-background-tertiary);padding:1px 4px;border-radius:3px;font-size:10px">$1</code>'); els.push(<p key={i} style={{ fontSize: 12, lineHeight: 1.7, margin: "4px 0", color: "var(--color-text-primary)" }} dangerouslySetInnerHTML={{ __html: html }} />); }
-    i++;
-  }
-  return <div>{els}</div>;
 }
 
 function CircuitMap({ dark }) {
@@ -341,7 +242,7 @@ function App() {
   const [tasks, setTasks] = useState(P.tasks);
   const [planned, setPlanned] = useState(P.planned);
   const ACCENT = "#1D9E75";
-  const tabs = ["overview", "docs", "circuit", "tasks"];
+  const tabs = ["overview", "circuit", "tasks"];
   const pillBadge = (n, total, accent) => <span style={{ fontSize: 10, background: n === total ? "#1D9E7520" : "var(--color-background-secondary)", color: n === total ? ACCENT : "var(--color-text-secondary)", padding: "2px 8px", borderRadius: 20, fontWeight: 600 }}>{n}/{total}</span>;
 
   return (
@@ -398,14 +299,6 @@ function App() {
               {P.knownIssues.map((issue, i) => <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "7px 10px", marginBottom: 6, background: dark ? "#50131320" : "#FCEBEB", borderRadius: 8, border: "0.5px solid #E24B4A33" }}><span style={{ color: "#E24B4A", flexShrink: 0 }}>⚠</span><span style={{ fontSize: 12, color: dark ? "#F09595" : "#A32D2D", lineHeight: 1.6 }}>{issue}</span></div>)}
             </div>
           </Collapse>
-        </div>
-      )}
-
-      {tab === "docs" && (
-        <div>
-          <p style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 16, lineHeight: 1.7 }}>Embedded at last build from GitHub. Connect GitHub to Notion (Settings → Connections → GitHub) for live-refreshing embeds on the Notion page.</p>
-          <Collapse title="README.md" icon="📖" defaultOpen={true}><div style={{ padding: "16px 20px", maxHeight: 480, overflowY: "auto" }}><MD src={README_CONTENT} /></div></Collapse>
-          <Collapse title="LPD_Analysis_Context.md" icon="🗂️"><div style={{ padding: "16px 20px", maxHeight: 480, overflowY: "auto" }}><MD src={CONTEXT_CONTENT} /></div></Collapse>
         </div>
       )}
 
