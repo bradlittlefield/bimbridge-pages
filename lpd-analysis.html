@@ -10,27 +10,17 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --color-background-primary:   #ffffff;
-    --color-background-secondary: #f5f5f3;
-    --color-background-tertiary:  #edede9;
-    --color-text-primary:         #1a1a18;
-    --color-text-secondary:       #6b6b68;
-    --color-text-info:            #185FA5;
-    --color-border-primary:       #c8c8c4;
-    --color-border-secondary:     #ddddd8;
-    --color-border-tertiary:      #e8e8e4;
+    --color-background-primary: #ffffff; --color-background-secondary: #f5f5f3;
+    --color-background-tertiary: #edede9; --color-text-primary: #1a1a18;
+    --color-text-secondary: #6b6b68; --color-text-info: #185FA5;
+    --color-border-primary: #c8c8c4; --color-border-secondary: #ddddd8; --color-border-tertiary: #e8e8e4;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --color-background-primary:   #1e1e1c;
-      --color-background-secondary: #2a2a27;
-      --color-background-tertiary:  #313130;
-      --color-text-primary:         #e8e8e4;
-      --color-text-secondary:       #9a9a94;
-      --color-text-info:            #7ab8f5;
-      --color-border-primary:       #4a4a46;
-      --color-border-secondary:     #3a3a37;
-      --color-border-tertiary:      #303030;
+      --color-background-primary: #1e1e1c; --color-background-secondary: #2a2a27;
+      --color-background-tertiary: #313130; --color-text-primary: #e8e8e4;
+      --color-text-secondary: #9a9a94; --color-text-info: #7ab8f5;
+      --color-border-primary: #4a4a46; --color-border-secondary: #3a3a37; --color-border-tertiary: #303030;
     }
   }
   html, body { background: var(--color-background-primary); color: var(--color-text-primary); font-family: system-ui, -apple-system, sans-serif; min-height: 100vh; }
@@ -50,7 +40,7 @@ const { useState, useEffect } = React;
 const P = {
   name: "LPD Analysis", emoji: "💡",
   tagline: "ASHRAE 90.1-2019 lighting power density compliance — automated.",
-  status: "Production", statusColor: "#1D9E75", statusBg: "#0F6E5620",
+  status: "Production", statusColor: "#1D9E75",
   category: ["BIMBridge", "Revit Native", "Schedule Extraction"],
   githubUrl: "https://github.com/bradlittlefield/bimbridge/tree/main/revit/BIMBridge.extension/BIMBridge.tab/Lighting.panel/LPD_Analysis.pushbutton",
   githubFolder: "revit/.../Lighting.panel/LPD_Analysis.pushbutton",
@@ -63,7 +53,7 @@ const P = {
     { name: "LPD_Analysis_Context.md", size: "14 KB", role: "Deep technical context doc", lastCommit: "2026-05-13", commitMsg: "Move to canonical extension folder", url: "https://github.com/bradlittlefield/bimbridge/blob/main/revit/BIMBridge.extension/BIMBridge.tab/Lighting.panel/LPD_Analysis.pushbutton/LPD_Analysis_Context.md" },
     { name: "README.md", size: "2.7 KB", role: "Installation, usage, flags reference", lastCommit: "2026-05-12", commitMsg: "Update via Drive sync", url: "https://github.com/bradlittlefield/bimbridge/blob/main/revit/BIMBridge.extension/BIMBridge.tab/Lighting.panel/LPD_Analysis.pushbutton/README.md" },
     { name: "update_script.bat", size: "209 B", role: "Pulls latest script.py without full pyRevit reload", lastCommit: "2026-05-12", commitMsg: "Update via Drive sync", url: "https://github.com/bradlittlefield/bimbridge/blob/main/revit/BIMBridge.extension/BIMBridge.tab/Lighting.panel/LPD_Analysis.pushbutton/update_script.bat" },
-    { name: "icon.png / icon.dark.png", size: "~1.8 KB", role: "Ribbon button icons (light + dark)", lastCommit: "—", commitMsg: "—", url: "https://github.com/bradlittlefield/bimbridge/tree/main/revit/BIMBridge.extension/BIMBridge.tab/Lighting.panel/LPD_Analysis.pushbutton" },
+    { name: "icon.png / icon.dark.png", size: "~1.8 KB", role: "Ribbon button icons", lastCommit: "—", commitMsg: "—", url: "https://github.com/bradlittlefield/bimbridge/tree/main/revit/BIMBridge.extension/BIMBridge.tab/Lighting.panel/LPD_Analysis.pushbutton" },
   ],
   execSteps: [
     { n: 1, label: "Link select", detail: "Collects all RevitLinkInstance objects. Auto-selects if one link; prompts via SelectFromList if multiple. Extracts link doc + total transform.", color: "#185FA5", fill: "#B5D4F4" },
@@ -110,27 +100,27 @@ function Collapse({ title, icon, badge, defaultOpen = false, children }) {
 function CircuitMap({ dark }) {
   const [hovered, setHovered] = useState(null);
   const C = {
-    blue:   { stroke: "#378ADD", fill: dark ? "#0C447C" : "#E6F1FB", text: dark ? "#B5D4F4" : "#185FA5" },
+    blue: { stroke: "#378ADD", fill: dark ? "#0C447C" : "#E6F1FB", text: dark ? "#B5D4F4" : "#185FA5" },
     purple: { stroke: "#7F77DD", fill: dark ? "#3C3489" : "#EEEDFE", text: dark ? "#CECBF6" : "#533AB7" },
-    amber:  { stroke: "#BA7517", fill: dark ? "#633806" : "#FAEEDA", text: dark ? "#FAC775" : "#854F0B" },
-    green:  { stroke: "#1D9E75", fill: dark ? "#085041" : "#E1F5EE", text: dark ? "#9FE1CB" : "#0F6E56" },
-    gray:   { stroke: "#888780", fill: dark ? "#444441" : "#F1EFE8", text: dark ? "#D3D1C7" : "#5F5E5A" },
+    amber: { stroke: "#BA7517", fill: dark ? "#633806" : "#FAEEDA", text: dark ? "#FAC775" : "#854F0B" },
+    green: { stroke: "#1D9E75", fill: dark ? "#085041" : "#E1F5EE", text: dark ? "#9FE1CB" : "#0F6E56" },
+    gray: { stroke: "#888780", fill: dark ? "#444441" : "#F1EFE8", text: dark ? "#D3D1C7" : "#5F5E5A" },
     wire: dark ? "#555" : "#bbb", grid: dark ? "rgba(255,255,255,0.035)" : "rgba(0,0,0,0.045)",
     tipBg: dark ? "#2C2C2A" : "#fff", tipBorder: dark ? "#444" : "#ccc", tipText: dark ? "#D3D1C7" : "#3d3d3a",
     legendBg: dark ? "#242422" : "#F8F8F6", legendBorder: dark ? "#3a3a38" : "#d0d0c8",
   };
   const nodes = [
-    { id: "repo",   x: 310, y:  28, w: 200, h: 38, label: "bimbridge repo",       c: "blue",   tip: "GitHub source of truth — all scripts, docs, templates." },
-    { id: "sched",  x:  30, y: 120, w: 150, h: 34, label: "schedules/",           c: "green",  tip: "Python/Flask web apps for MEP calculations." },
-    { id: "revit",  x: 610, y: 120, w: 150, h: 34, label: "revit/",               c: "blue",   tip: "All pyRevit extension tools." },
-    { id: "mep",    x:  20, y: 212, w: 170, h: 34, label: "MEP Load Calc",        c: "green",  tip: "Flask app · localhost:5757 · Status: Production" },
-    { id: "ext",    x: 560, y: 212, w: 220, h: 34, label: "BIMBridge.extension/", c: "blue",   tip: "pyRevit extension — the full BIMBridge ribbon tab." },
-    { id: "pLight", x: 400, y: 318, w: 120, h: 32, label: "Lighting.panel",       c: "amber",  tip: "LPD Analysis + Light Fixture Schedule Builder" },
-    { id: "pPower", x: 534, y: 318, w: 120, h: 32, label: "Power.panel",          c: "amber",  tip: "Wire & Conduit Sizer" },
-    { id: "pOther", x: 668, y: 318, w: 130, h: 32, label: "+ 2 panels",           c: "gray",   tip: "Equipment Sync (3 tools) + RevIRS.panel" },
-    { id: "lpd",    x: 374, y: 422, w: 152, h: 44, label: "LPD Analysis",         c: "green",  tip: "⭐ YOU ARE HERE · Status: Production", active: true },
-    { id: "lfsb",   x: 538, y: 430, w: 112, h: 30, label: "Fixture Schedule",     c: "gray",   tip: "Light Fixture Schedule Builder · Stable / Needs Work" },
-    { id: "revirs", x: 660, y: 430, w: 130, h: 30, label: "Family Audit",         c: "purple", tip: "Family Field Audit (RevIRS) · Status: Production" },
+    { id: "repo", x: 310, y: 28, w: 200, h: 38, label: "bimbridge repo", c: "blue", tip: "GitHub source of truth — all scripts, docs, templates." },
+    { id: "sched", x: 30, y: 120, w: 150, h: 34, label: "schedules/", c: "green", tip: "Python/Flask web apps for MEP calculations." },
+    { id: "revit", x: 610, y: 120, w: 150, h: 34, label: "revit/", c: "blue", tip: "All pyRevit extension tools." },
+    { id: "mep", x: 20, y: 212, w: 170, h: 34, label: "MEP Load Calc", c: "green", tip: "Flask app · localhost:5757 · Status: Production" },
+    { id: "ext", x: 560, y: 212, w: 220, h: 34, label: "BIMBridge.extension/", c: "blue", tip: "pyRevit extension — the full BIMBridge ribbon tab." },
+    { id: "pLight", x: 400, y: 318, w: 120, h: 32, label: "Lighting.panel", c: "amber", tip: "LPD Analysis + Light Fixture Schedule Builder" },
+    { id: "pPower", x: 534, y: 318, w: 120, h: 32, label: "Power.panel", c: "amber", tip: "Wire & Conduit Sizer" },
+    { id: "pOther", x: 668, y: 318, w: 130, h: 32, label: "+ 2 panels", c: "gray", tip: "Equipment Sync (3 tools) + RevIRS.panel" },
+    { id: "lpd", x: 374, y: 422, w: 152, h: 44, label: "LPD Analysis", c: "green", tip: "⭐ YOU ARE HERE · Status: Production", active: true },
+    { id: "lfsb", x: 538, y: 430, w: 112, h: 30, label: "Fixture Schedule", c: "gray", tip: "Light Fixture Schedule Builder · Stable / Needs Work" },
+    { id: "revirs", x: 660, y: 430, w: 130, h: 30, label: "Family Audit", c: "purple", tip: "Family Field Audit (RevIRS) · Status: Production" },
   ];
   const nm = {}; nodes.forEach(n => nm[n.id] = n);
   const bx = id => nm[id].x + nm[id].w / 2; const by = id => nm[id].y + nm[id].h;
@@ -154,35 +144,34 @@ function CircuitMap({ dark }) {
         {Array.from({ length: 18 }, (_, i) => <line key={`v${i}`} x1={i*48} y1={0} x2={i*48} y2={SVG_H} stroke={C.grid} strokeWidth="1" />)}
         {Array.from({ length: 12 }, (_, i) => <line key={`h${i}`} x1={0} y1={i*48} x2={SVG_W} y2={i*48} stroke={C.grid} strokeWidth="1" />)}
         {edges.map(({ f, t, active }) => {
-          const fx = bx(f), fy = by(f), ttx = tx(t), tty = ty(t), mid = Math.round((fy + tty) / 2);
-          const hovering = hovered === f || hovered === t;
-          const stroke = hovering ? "#378ADD" : active ? "#1D9E75" : C.wire;
-          const markerId = hovering ? "arrowHover" : active ? "arrowGreen" : "arrowGray";
-          const strokeW = hovering ? 2 : active ? 1.6 : 0.8;
+          const fx = bx(f), fy = by(f), ttx = tx(t), tty = ty(t), mid = Math.round((fy+tty)/2);
+          const hovering = hovered===f||hovered===t;
+          const stroke = hovering?"#378ADD":active?"#1D9E75":C.wire;
+          const markerId = hovering?"arrowHover":active?"arrowGreen":"arrowGray";
           const d = `M ${fx} ${fy} L ${fx} ${mid} L ${ttx} ${mid} L ${ttx} ${tty}`;
           return <g key={`${f}-${t}`}>
-            {active && !hovering && <path d={d} fill="none" stroke="#1D9E75" strokeWidth="5" opacity="0.08" strokeLinecap="round" />}
-            <path d={d} fill="none" stroke={stroke} strokeWidth={strokeW} strokeLinecap="round" markerEnd={`url(#${markerId})`} opacity={hovering ? 1 : active ? 0.85 : 0.6} />
-            <circle cx={fx} cy={fy} r="3" fill={hovering ? "#378ADD" : active ? "#1D9E75" : C.wire} opacity={hovering ? 1 : active ? 0.8 : 0.5} />
+            {active&&!hovering&&<path d={d} fill="none" stroke="#1D9E75" strokeWidth="5" opacity="0.08" strokeLinecap="round"/>}
+            <path d={d} fill="none" stroke={stroke} strokeWidth={hovering?2:active?1.6:0.8} strokeLinecap="round" markerEnd={`url(#${markerId})`} opacity={hovering?1:active?0.85:0.6}/>
+            <circle cx={fx} cy={fy} r="3" fill={hovering?"#378ADD":active?"#1D9E75":C.wire} opacity={hovering?1:active?0.8:0.5}/>
           </g>;
         })}
         {nodes.map(n => {
-          const col = C[n.c]; const isHov = hovered === n.id;
-          return <g key={n.id} style={{ cursor: "pointer" }} onMouseEnter={() => setHovered(n.id)} onMouseLeave={() => setHovered(null)}>
-            {n.active && <rect x={n.x-6} y={n.y-6} width={n.w+12} height={n.h+12} rx={11} fill="none" stroke="#1D9E75" strokeWidth="1.5" strokeDasharray="6 3" opacity="0.8" />}
-            <rect x={n.x} y={n.y} width={n.w} height={n.h} rx={7} fill={isHov ? col.stroke : col.fill} stroke={col.stroke} strokeWidth={n.active ? 1.5 : 0.75} style={{ transition: "fill 0.15s" }} />
-            <text x={n.x+n.w/2} y={n.y+n.h/2} textAnchor="middle" dominantBaseline="central" fontSize="11" fontWeight={n.active ? "700" : "500"} fill={isHov ? "#fff" : col.text} fontFamily="system-ui, sans-serif" style={{ userSelect: "none", pointerEvents: "none" }}>{n.label}</text>
-            {n.active && !isHov && <circle cx={n.x+n.w-10} cy={n.y+10} r="4" fill="#1D9E75" />}
+          const col=C[n.c]; const isHov=hovered===n.id;
+          return <g key={n.id} style={{cursor:"pointer"}} onMouseEnter={()=>setHovered(n.id)} onMouseLeave={()=>setHovered(null)}>
+            {n.active&&<rect x={n.x-6} y={n.y-6} width={n.w+12} height={n.h+12} rx={11} fill="none" stroke="#1D9E75" strokeWidth="1.5" strokeDasharray="6 3" opacity="0.8"/>}
+            <rect x={n.x} y={n.y} width={n.w} height={n.h} rx={7} fill={isHov?col.stroke:col.fill} stroke={col.stroke} strokeWidth={n.active?1.5:0.75} style={{transition:"fill 0.15s"}}/>
+            <text x={n.x+n.w/2} y={n.y+n.h/2} textAnchor="middle" dominantBaseline="central" fontSize="11" fontWeight={n.active?"700":"500"} fill={isHov?"#fff":col.text} fontFamily="system-ui,sans-serif" style={{userSelect:"none",pointerEvents:"none"}}>{n.label}</text>
+            {n.active&&!isHov&&<circle cx={n.x+n.w-10} cy={n.y+10} r="4" fill="#1D9E75"/>}
           </g>;
         })}
-        <rect x={16} y={418} width={178} height={108} rx={8} fill={C.legendBg} stroke={C.legendBorder} strokeWidth="0.75" />
-        <text x={28} y={436} fontSize="9" fontWeight="700" letterSpacing="0.1em" fill={dark ? "#777" : "#999"} fontFamily="system-ui, sans-serif">LEGEND</text>
-        {[{ c: "blue", label: "Core / structure" }, { c: "amber", label: "Ribbon panel" }, { c: "green", label: "Production tool" }, { c: "purple", label: "RevIRS tool" }, { c: "gray", label: "Stable / other" }].map((item, i) => {
-          const col = C[item.c];
-          return <g key={i}><rect x={28} y={444+i*14} width={11} height={11} rx={2} fill={col.fill} stroke={col.stroke} strokeWidth="0.85" /><text x={45} y={453+i*14} fontSize="10" fill={dark ? "#B4B2A9" : "#5F5E5A"} fontFamily="system-ui, sans-serif">{item.label}</text></g>;
+        <rect x={16} y={418} width={178} height={108} rx={8} fill={C.legendBg} stroke={C.legendBorder} strokeWidth="0.75"/>
+        <text x={28} y={436} fontSize="9" fontWeight="700" letterSpacing="0.1em" fill={dark?"#777":"#999"} fontFamily="system-ui,sans-serif">LEGEND</text>
+        {[{c:"blue",label:"Core / structure"},{c:"amber",label:"Ribbon panel"},{c:"green",label:"Production tool"},{c:"purple",label:"RevIRS tool"},{c:"gray",label:"Stable / other"}].map((item,i)=>{
+          const col=C[item.c];
+          return <g key={i}><rect x={28} y={444+i*14} width={11} height={11} rx={2} fill={col.fill} stroke={col.stroke} strokeWidth="0.85"/><text x={45} y={453+i*14} fontSize="10" fill={dark?"#B4B2A9":"#5F5E5A"} fontFamily="system-ui,sans-serif">{item.label}</text></g>;
         })}
       </svg>
-      {hovered && nm[hovered] && <div style={{ position: "absolute", bottom: 10, left: "50%", transform: "translateX(-50%)", background: C.tipBg, border: `0.5px solid ${C.tipBorder}`, borderRadius: 8, padding: "7px 14px", fontSize: 12, color: C.tipText, pointerEvents: "none", whiteSpace: "nowrap", zIndex: 10 }}>{nm[hovered].tip}</div>}
+      {hovered&&nm[hovered]&&<div style={{position:"absolute",bottom:10,left:"50%",transform:"translateX(-50%)",background:C.tipBg,border:`0.5px solid ${C.tipBorder}`,borderRadius:8,padding:"7px 14px",fontSize:12,color:C.tipText,pointerEvents:"none",whiteSpace:"nowrap",zIndex:10}}>{nm[hovered].tip}</div>}
     </div>
   );
 }
@@ -195,13 +184,13 @@ function ExecFlow() {
       <div style={{ display: "flex", gap: 0, marginBottom: 14, position: "relative" }}>
         {steps.map((s, i) => (
           <div key={s.n} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
-            {i < steps.length - 1 && <div style={{ position: "absolute", top: 15, left: "50%", width: "100%", height: 2, background: active === s.n || active === steps[i+1]?.n ? s.color : "var(--color-border-tertiary)", transition: "background 0.2s", zIndex: 0 }} />}
-            <button onClick={() => setActive(active === s.n ? null : s.n)} style={{ width: 30, height: 30, borderRadius: "50%", background: active === s.n ? s.color : s.fill, border: `2px solid ${s.color}`, cursor: "pointer", zIndex: 1, position: "relative", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: active === s.n ? "#fff" : s.color, transition: "background 0.15s, color 0.15s" }}>{s.n}</button>
-            <span style={{ fontSize: 9, fontWeight: 600, color: active === s.n ? s.color : "var(--color-text-secondary)", marginTop: 5, textAlign: "center", maxWidth: 76, lineHeight: 1.3 }}>{s.label}</span>
+            {i < steps.length - 1 && <div style={{ position: "absolute", top: 15, left: "50%", width: "100%", height: 2, background: active===s.n||active===steps[i+1]?.n?s.color:"var(--color-border-tertiary)", transition: "background 0.2s", zIndex: 0 }} />}
+            <button onClick={() => setActive(active===s.n?null:s.n)} style={{ width: 30, height: 30, borderRadius: "50%", background: active===s.n?s.color:s.fill, border: `2px solid ${s.color}`, cursor: "pointer", zIndex: 1, position: "relative", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: active===s.n?"#fff":s.color, transition: "background 0.15s, color 0.15s" }}>{s.n}</button>
+            <span style={{ fontSize: 9, fontWeight: 600, color: active===s.n?s.color:"var(--color-text-secondary)", marginTop: 5, textAlign: "center", maxWidth: 76, lineHeight: 1.3 }}>{s.label}</span>
           </div>
         ))}
       </div>
-      {active ? (() => { const s = steps.find(x => x.n === active); return <div style={{ background: "var(--color-background-secondary)", border: `1px solid ${s.color}44`, borderRadius: 10, padding: "12px 16px", display: "flex", gap: 12, alignItems: "flex-start" }}><div style={{ width: 26, height: 26, borderRadius: "50%", background: s.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0 }}>{s.n}</div><div><div style={{ fontSize: 12, fontWeight: 600, color: s.color, marginBottom: 4 }}>Step {s.n} — {s.label}</div><div style={{ fontSize: 12, color: "var(--color-text-primary)", lineHeight: 1.7 }}>{s.detail}</div></div></div>; })() : <div style={{ fontSize: 11, color: "var(--color-text-secondary)", textAlign: "center", padding: "6px 0" }}>tap a step to expand</div>}
+      {active ? (() => { const s = steps.find(x => x.n===active); return <div style={{ background: "var(--color-background-secondary)", border: `1px solid ${s.color}44`, borderRadius: 10, padding: "12px 16px", display: "flex", gap: 12, alignItems: "flex-start" }}><div style={{ width: 26, height: 26, borderRadius: "50%", background: s.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0 }}>{s.n}</div><div><div style={{ fontSize: 12, fontWeight: 600, color: s.color, marginBottom: 4 }}>Step {s.n} — {s.label}</div><div style={{ fontSize: 12, color: "var(--color-text-primary)", lineHeight: 1.7 }}>{s.detail}</div></div></div>; })() : <div style={{ fontSize: 11, color: "var(--color-text-secondary)", textAlign: "center", padding: "6px 0" }}>tap a step to expand</div>}
     </div>
   );
 }
@@ -209,22 +198,22 @@ function ExecFlow() {
 function FileManifest() {
   const icons = { ".py": "🐍", ".xlsx": "📊", ".md": "📝", ".bat": "⚙️" };
   const getIcon = name => { for (const [ext, icon] of Object.entries(icons)) if (name.endsWith(ext)) return icon; return "🖼️"; };
-  return <div>{P.files.map((f, i) => <div key={f.name} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 0", borderBottom: i < P.files.length - 1 ? "0.5px solid var(--color-border-tertiary)" : "none" }}><span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>{getIcon(f.name)}</span><div style={{ flex: 1, minWidth: 0 }}><div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}><a href={f.url} target="_blank" style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-primary)", textDecoration: "none", fontFamily: "monospace" }}>{f.name}</a><span style={{ fontSize: 10, color: "var(--color-text-secondary)", background: "var(--color-background-secondary)", padding: "1px 7px", borderRadius: 20 }}>{f.size}</span></div><div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 2, lineHeight: 1.5 }}>{f.role}</div></div><div style={{ flexShrink: 0, textAlign: "right", minWidth: 110 }}>{f.lastCommit !== "—" ? <><div style={{ fontSize: 10, color: "var(--color-text-secondary)", fontFamily: "monospace" }}>{f.lastCommit}</div><div style={{ fontSize: 10, color: "var(--color-text-secondary)", maxWidth: 130, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.commitMsg}</div></> : <span style={{ fontSize: 10, color: "var(--color-text-secondary)" }}>—</span>}</div></div>)}</div>;
+  return <div>{P.files.map((f, i) => <div key={f.name} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 0", borderBottom: i<P.files.length-1?"0.5px solid var(--color-border-tertiary)":"none" }}><span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>{getIcon(f.name)}</span><div style={{ flex: 1, minWidth: 0 }}><div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}><a href={f.url} target="_blank" style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-primary)", textDecoration: "none", fontFamily: "monospace" }}>{f.name}</a><span style={{ fontSize: 10, color: "var(--color-text-secondary)", background: "var(--color-background-secondary)", padding: "1px 7px", borderRadius: 20 }}>{f.size}</span></div><div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 2, lineHeight: 1.5 }}>{f.role}</div></div><div style={{ flexShrink: 0, textAlign: "right", minWidth: 110 }}>{f.lastCommit!=="—"?<><div style={{ fontSize: 10, color: "var(--color-text-secondary)", fontFamily: "monospace" }}>{f.lastCommit}</div><div style={{ fontSize: 10, color: "var(--color-text-secondary)", maxWidth: 130, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.commitMsg}</div></>:<span style={{ fontSize: 10, color: "var(--color-text-secondary)" }}>—</span>}</div></div>)}</div>;
 }
 
 function QuickStart() {
   const [done, setDone] = useState(Array(P.quickStart.length).fill(false));
-  const toggle = i => setDone(prev => prev.map((v, j) => j === i ? !v : v));
+  const toggle = i => setDone(prev => prev.map((v, j) => j===i?!v:v));
   const reset = () => setDone(Array(P.quickStart.length).fill(false));
-  const n = done.filter(Boolean).length; const all = n === P.quickStart.length;
+  const n = done.filter(Boolean).length; const all = n===P.quickStart.length;
   return (
     <div>
       <div style={{ background: "var(--color-background-tertiary)", borderRadius: 10, padding: "14px 16px", marginBottom: 10, border: "0.5px solid var(--color-border-tertiary)" }}>
         <div style={{ color: "#1D9E75", marginBottom: 8, fontSize: 10, fontFamily: "monospace", fontWeight: 700 }}>// LPD Analysis — run checklist</div>
-        {P.quickStart.map((step, i) => <div key={i} onClick={() => toggle(i)} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "5px 0", cursor: "pointer", borderBottom: i < P.quickStart.length - 1 ? "0.5px solid var(--color-border-tertiary)" : "none" }}><span style={{ color: done[i] ? "#1D9E75" : "var(--color-text-secondary)", flexShrink: 0, fontWeight: 700, fontSize: 12, marginTop: 1, fontFamily: "monospace" }}>{done[i] ? "✓" : `${i+1}.`}</span><span style={{ fontSize: 12, color: done[i] ? "var(--color-text-secondary)" : "var(--color-text-primary)", textDecoration: done[i] ? "line-through" : "none", lineHeight: 1.6 }}>{step}</span></div>)}
+        {P.quickStart.map((step, i) => <div key={i} onClick={() => toggle(i)} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "5px 0", cursor: "pointer", borderBottom: i<P.quickStart.length-1?"0.5px solid var(--color-border-tertiary)":"none" }}><span style={{ color: done[i]?"#1D9E75":"var(--color-text-secondary)", flexShrink: 0, fontWeight: 700, fontSize: 12, marginTop: 1, fontFamily: "monospace" }}>{done[i]?"✓":`${i+1}.`}</span><span style={{ fontSize: 12, color: done[i]?"var(--color-text-secondary)":"var(--color-text-primary)", textDecoration: done[i]?"line-through":"none", lineHeight: 1.6 }}>{step}</span></div>)}
       </div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        {all ? <span style={{ fontSize: 12, color: "#1D9E75", fontWeight: 600 }}>✓ All steps complete</span> : <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{n} / {P.quickStart.length} steps</span>}
+        {all?<span style={{ fontSize: 12, color: "#1D9E75", fontWeight: 600 }}>✓ All steps complete</span>:<span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{n} / {P.quickStart.length} steps</span>}
         <button onClick={reset} style={{ fontSize: 11, color: "var(--color-text-secondary)", background: "none", border: "0.5px solid var(--color-border-tertiary)", borderRadius: 6, padding: "3px 10px", cursor: "pointer" }}>reset</button>
       </div>
     </div>
@@ -232,8 +221,8 @@ function QuickStart() {
 }
 
 function TaskList({ items, setItems, accent }) {
-  const toggle = i => setItems(prev => prev.map((t, j) => j === i ? { ...t, done: !t.done } : t));
-  return <div style={{ padding: "4px 16px 10px" }}>{items.map((item, i) => <div key={i} onClick={() => toggle(i)} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "8px 0", cursor: "pointer", borderBottom: i < items.length - 1 ? "0.5px solid var(--color-border-tertiary)" : "none" }}><div style={{ width: 15, height: 15, marginTop: 2, border: `1.5px solid ${item.done ? accent : "var(--color-border-secondary)"}`, borderRadius: 3, background: item.done ? accent : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.15s" }}>{item.done && <span style={{ color: "#fff", fontSize: 8 }}>✓</span>}</div><span style={{ fontSize: 13, color: item.done ? "var(--color-text-secondary)" : "var(--color-text-primary)", textDecoration: item.done ? "line-through" : "none", lineHeight: 1.5 }}>{item.text}</span></div>)}</div>;
+  const toggle = i => setItems(prev => prev.map((t, j) => j===i?{...t,done:!t.done}:t));
+  return <div style={{ padding: "4px 16px 10px" }}>{items.map((item, i) => <div key={i} onClick={() => toggle(i)} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "8px 0", cursor: "pointer", borderBottom: i<items.length-1?"0.5px solid var(--color-border-tertiary)":"none" }}><div style={{ width: 15, height: 15, marginTop: 2, border: `1.5px solid ${item.done?accent:"var(--color-border-secondary)"}`, borderRadius: 3, background: item.done?accent:"transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.15s" }}>{item.done&&<span style={{ color: "#fff", fontSize: 8 }}>✓</span>}</div><span style={{ fontSize: 13, color: item.done?"var(--color-text-secondary)":"var(--color-text-primary)", textDecoration: item.done?"line-through":"none", lineHeight: 1.5 }}>{item.text}</span></div>)}</div>;
 }
 
 function App() {
@@ -243,17 +232,17 @@ function App() {
   const [planned, setPlanned] = useState(P.planned);
   const ACCENT = "#1D9E75";
   const tabs = ["overview", "circuit", "tasks"];
-  const pillBadge = (n, total, accent) => <span style={{ fontSize: 10, background: n === total ? "#1D9E7520" : "var(--color-background-secondary)", color: n === total ? ACCENT : "var(--color-text-secondary)", padding: "2px 8px", borderRadius: 20, fontWeight: 600 }}>{n}/{total}</span>;
+  const pillBadge = (n, total, accent) => <span style={{ fontSize: 10, background: n===total?"#1D9E7520":"var(--color-background-secondary)", color: n===total?ACCENT:"var(--color-text-secondary)", padding: "2px 8px", borderRadius: 20, fontWeight: 600 }}>{n}/{total}</span>;
 
   return (
-    <div style={{ fontFamily: "system-ui, -apple-system, sans-serif", maxWidth: 680, margin: "0 auto", paddingBottom: 48 }}>
+    <div style={{ fontFamily: "system-ui,-apple-system,sans-serif", maxWidth: 680, margin: "0 auto", paddingBottom: 48 }}>
       <div style={{ paddingTop: 20, paddingBottom: 16, borderBottom: "0.5px solid var(--color-border-tertiary)", marginBottom: 20 }}>
         <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-          <div style={{ width: 52, height: 52, borderRadius: 12, background: dark ? "#0F3D28" : "#E1F5EE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, flexShrink: 0, border: `1px solid ${ACCENT}44` }}>{P.emoji}</div>
+          <div style={{ width: 52, height: 52, borderRadius: 12, background: dark?"#0F3D28":"#E1F5EE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, flexShrink: 0, border: `1px solid ${ACCENT}44` }}>{P.emoji}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 4 }}>
               <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: "var(--color-text-primary)" }}>{P.name}</h1>
-              <Badge label={P.status} color={ACCENT} bg={dark ? "#0F3D28" : "#E1F5EE"} />
+              <Badge label={P.status} color={ACCENT} bg={dark?"#0F3D28":"#E1F5EE"} />
             </div>
             <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: "0 0 8px", lineHeight: 1.5 }}>{P.tagline}</p>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
@@ -271,7 +260,7 @@ function App() {
       </div>
 
       <div style={{ display: "flex", borderBottom: "0.5px solid var(--color-border-tertiary)", marginBottom: 22 }}>
-        {tabs.map(t => <button key={t} onClick={() => setTab(t)} style={{ background: "none", border: "none", cursor: "pointer", padding: "8px 16px", fontSize: 13, fontWeight: tab === t ? 600 : 400, color: tab === t ? ACCENT : "var(--color-text-secondary)", borderBottom: `2px solid ${tab === t ? ACCENT : "transparent"}`, transition: "all 0.15s" }}>{t === "circuit" ? "Circuit Map" : t.charAt(0).toUpperCase() + t.slice(1)}</button>)}
+        {tabs.map(t => <button key={t} onClick={() => setTab(t)} style={{ background: "none", border: "none", cursor: "pointer", padding: "8px 16px", fontSize: 13, fontWeight: tab===t?600:400, color: tab===t?ACCENT:"var(--color-text-secondary)", borderBottom: `2px solid ${tab===t?ACCENT:"transparent"}`, transition: "all 0.15s" }}>{t==="circuit"?"Circuit Map":t.charAt(0).toUpperCase()+t.slice(1)}</button>)}
       </div>
 
       {tab === "overview" && (
@@ -294,9 +283,9 @@ function App() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8, marginBottom: 22 }}>
             {P.relatedTools.map(tool => <div key={tool.name} style={{ background: tool.bg, border: `0.5px solid ${tool.color}44`, borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}><span style={{ fontSize: 18 }}>🔧</span><div><div style={{ fontSize: 12, fontWeight: 600, color: tool.color }}>{tool.name}</div><div style={{ fontSize: 10, color: tool.color, opacity: 0.7, marginTop: 1 }}>{tool.panel}</div></div></div>)}
           </div>
-          <Collapse title="Known issues" icon="⚠️" badge={<span style={{ fontSize: 10, background: dark ? "#501313" : "#FCEBEB", color: "#E24B4A", padding: "2px 7px", borderRadius: 20, fontWeight: 600 }}>{P.knownIssues.length}</span>}>
+          <Collapse title="Known issues" icon="⚠️" badge={<span style={{ fontSize: 10, background: dark?"#501313":"#FCEBEB", color: "#E24B4A", padding: "2px 7px", borderRadius: 20, fontWeight: 600 }}>{P.knownIssues.length}</span>}>
             <div style={{ padding: "12px 16px" }}>
-              {P.knownIssues.map((issue, i) => <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "7px 10px", marginBottom: 6, background: dark ? "#50131320" : "#FCEBEB", borderRadius: 8, border: "0.5px solid #E24B4A33" }}><span style={{ color: "#E24B4A", flexShrink: 0 }}>⚠</span><span style={{ fontSize: 12, color: dark ? "#F09595" : "#A32D2D", lineHeight: 1.6 }}>{issue}</span></div>)}
+              {P.knownIssues.map((issue, i) => <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "7px 10px", marginBottom: 6, background: dark?"#50131320":"#FCEBEB", borderRadius: 8, border: "0.5px solid #E24B4A33" }}><span style={{ color: "#E24B4A", flexShrink: 0 }}>⚠</span><span style={{ fontSize: 12, color: dark?"#F09595":"#A32D2D", lineHeight: 1.6 }}>{issue}</span></div>)}
             </div>
           </Collapse>
         </div>
