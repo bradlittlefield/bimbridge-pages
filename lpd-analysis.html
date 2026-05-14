@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LPD Analysis — BIMBridge Project Hub</title>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --color-background-primary:   #ffffff;
+    --color-background-secondary: #f5f5f3;
+    --color-background-tertiary:  #edede9;
+    --color-text-primary:         #1a1a18;
+    --color-text-secondary:       #6b6b68;
+    --color-text-info:            #185FA5;
+    --color-border-primary:       #c8c8c4;
+    --color-border-secondary:     #ddddd8;
+    --color-border-tertiary:      #e8e8e4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-background-primary:   #1e1e1c;
+      --color-background-secondary: #2a2a27;
+      --color-background-tertiary:  #313130;
+      --color-text-primary:         #e8e8e4;
+      --color-text-secondary:       #9a9a94;
+      --color-text-info:            #7ab8f5;
+      --color-border-primary:       #4a4a46;
+      --color-border-secondary:     #3a3a37;
+      --color-border-tertiary:      #303030;
+    }
+  }
+  html, body { background: var(--color-background-primary); color: var(--color-text-primary); font-family: system-ui, -apple-system, sans-serif; min-height: 100vh; }
+  #root { padding: 0 24px; max-width: 900px; margin: 0 auto; }
+  * { -webkit-font-smoothing: antialiased; }
+  a { color: inherit; }
+  button { font-family: inherit; }
+  code, pre { font-family: ui-monospace, "SF Mono", "Cascadia Code", monospace; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--color-border-secondary); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const README_CONTENT = `# LPD Analysis — pyRevit Script
+## Installation
+
+1. Copy the **entire** \`LPD_Analysis.pushbutton\` folder and \`LPD_Analysis_Template.xlsx\`
+   into your firm's pyRevit extension panel directory, e.g.:
+   \`\`\`
+   %APPDATA%\\pyRevit-Master\\extensions\\YourFirm.extension\\YourPanel.panel\\
+   \`\`\`
+2. Reload pyRevit (pyRevit tab → Reload).
+3. The **LPD Analysis** button will appear in your panel.
+
+## First-Time Setup
+- \`LPD_Analysis_Template.xlsx\` **must live in the same folder** as \`script.py\`.
+- If openpyxl is not installed, run: pip install openpyxl
+
+## Usage
+
+1. Open your **MEP/Electrical host model** with the architectural link loaded.
+2. Click the **LPD Analysis** button.
+3. If multiple links are loaded, select the architectural model containing the rooms.
+4. Choose a save location for the output \`.xlsx\` file.
+
+## Output Workbook
+
+| Tab | Purpose |
+|---|---|
+| IESNA_LPD_Reference | LPD allowances by area type |
+| LPD_Schedule | One row per fixture type per room |
+| Summary | Aggregated LPD by area type + whole building |
+
+## Flags
+
+| Flag | Meaning |
+|---|---|
+| ⚠ Missing Type Mark | Fixture has no type mark |
+| ⚠ Wattage Missing | No wattage found on fixture |
+| ⚠ Wattage = 0 | Wattage is zero — needs population |
+| ⚠ Wattage High | Wattage exceeds 500W — verify |
+
+## Future Enhancements
+- [ ] COMcheck .ccx export
+- [ ] Sustainability report export
+- [ ] Support for fixtures in linked models`;
+
+const CONTEXT_CONTENT = `# LPD Analysis Tool — Project Context
+**Platform:** Autodesk Revit 2024+ via pyRevit (IronPython)
+**Standard:** ASHRAE 90.1-2019 Table 9.6.1 Space-by-Space Method
+**Status:** Production — confirmed working in real projects
+
+## What This Tool Does
+
+Automates the ASHRAE 90.1-2019 LPD compliance workflow. Without this tool the process is entirely manual: extract room data, look up LPD allowances, count fixtures, calculate wattages, build the schedule, compare to allowables. On a mid-size project this takes hours. The tool does it in seconds.
+
+## Execution Flow
+
+**Step 1 — Link selection:** Collects all RevitLinkInstance objects. Auto-selects if one; prompts via SelectFromList if multiple.
+
+**Step 2 — Room collection:** OST_Rooms first, fallback to OST_MEPSpaces. Skips Area = 0.
+
+**Step 3 — Fixture collection:** OST_LightingFixtures from host model. Excludes exit, emergency, battery pack families.
+
+**Step 4 — Point-in-room:** Gets fixture Location.Point → applies inverse link transform → drops to Z=0 → tests against every room.
+
+**Step 5 — Build rows:** Assembles: room #, name, area, IESNA match, Type Mark, Family Name, Type Name, count, wattage.
+
+**Step 6 — Excel injection:** Reads template as ZIP → patches sheet XMLs directly → writes output. Drops calcChain.xml. No openpyxl write path.
+
+## Known Issues
+
+- Families without Apparent Power / Power Factor → blank wattage + flag
+- Hybrid room numbering (1A-101) may sort unexpectedly
+- After dropdown change, some cells need Ctrl+Alt+F9 for full recalc
+
+## Planned
+
+- COMcheck .ccx export
+- Wattage parameter standardization script
+- Sustainability committee report format`;
+
+const P = {
+  name: "LPD Analysis", emoji: "💡",
+  tagline: "ASHRAE 90.1-2019 lighting power density compliance — automated.",
+  status: "Production", statusColor: "#1D9E75",
+  category: ["BIMBridge", "Revit Native", "Schedule Extraction"],
+  githubUrl: "https://github.com/bradlittlefield/bimbridge/tree/main/revit/BIMBridge.extension/BIMBridge.tab/Lighting.panel/LPD_Analysis.pushbutton",
+  githubFolder: "revit/.../Lighting.panel/LPD_Analysis.pushbutton",
+  parentProject: "BIMBridge", parentUrl: "https://github.com/bradlittlefield/bimbridge",
+  metrics: [{ label: "IESNA types", value: "99" }, { label: "Revit", value: "2024+" }, { label: "Output sheets", value: "3" }, { label: "Runtime", value: "<10s" }],
+  techStack: ["IronPython / pyRevit", "Revit API", "ZIP / XML injection", "ASHRAE 90.1-2019"],
+  files: [
+    { name: "script.py", size: "43 KB", role: "Main pyRevit pushbutton script", lastCommit: "2026-05-13", commitMsg: "Sub Area col D support", url: "https://github.com/bradlittlefield/bimbridge/blob/main/revit/BIMBridge.extension/BIMBridge.tab/Lighting.panel/LPD_Analysis.pushbutton/script.py" },
+    { name: "LPD_Analysis_Template.xlsx", size: "47 KB", role: "Excel template — preserves formulas + conditional fmt", lastCommit: "2026-05-13", commitMsg: "v5 updates header row", url: "https://github.com/bradlittlefield/bimbridge/blob/main/revit/BIMBridge.extension/BIMBridge.tab/Lighting.panel/LPD_Analysis.pushbutton/LPD_Analysis_Template.xlsx" },
+    { name: "LPD_Analysis_Context.md", size: "14 KB", role: "Deep technical context doc", lastCommit: "2026-05-13", commitMsg: "Move to canonical extension folder", url: "https://github.com/bradlittlefield/bimbridge/blob/main/revit/BIMBridge.extension/BIMBridge.tab/Lighting.panel/LPD_Analysis.pushbutton/LPD_Analysis_Context.md" },
+    { name: "README.md", size: "2.7 KB", role: "Installation, usage, flags reference", lastCommit: "2026-05-12", commitMsg: "Update via Drive sync", url: "https://github.com/bradlittlefield/bimbridge/blob/main/revit/BIMBridge.extension/BIMBridge.tab/Lighting.panel/LPD_Analysis.pushbutton/README.md" },
+    { name: "update_script.bat", size: "209 B", role: "Pulls latest script.py without full pyRevit reload", lastCommit: "2026-05-12", commitMsg: "Update via Drive sync", url: "https://github.com/bradlittlefield/bimbridge/blob/main/revit/BIMBridge.extension/BIMBridge.tab/Lighting.panel/LPD_Analysis.pushbutton/update_script.bat" },
+    { name: "icon.png / icon.dark.png", size: "~1.8 KB", role: "Ribbon button icons", lastCommit: "—", commitMsg: "—", url: "https://github.com/bradlittlefield/bimbridge/tree/main/revit/BIMBridge.extension/BIMBridge.tab/Lighting.panel/LPD_Analysis.pushbutton" },
+  ],
+  execSteps: [
+    { n: 1, label: "Link select", detail: "Collects all RevitLinkInstance objects. Auto-selects if one link; prompts via SelectFromList if multiple. Extracts link doc + total transform.", color: "#185FA5", fill: "#B5D4F4" },
+    { n: 2, label: "Room collect", detail: "OST_Rooms first, fallback to OST_MEPSpaces. Uses IsPointInRoom / IsPointInSpace. Only includes elements where Area > 0.", color: "#533AB7", fill: "#CECBF6" },
+    { n: 3, label: "Fixture filter", detail: "OST_LightingFixtures from host model only. Excludes exit, emergency, battery pack families by keyword match on Family Name + Type Mark + Type Name.", color: "#854F0B", fill: "#FAC775" },
+    { n: 4, label: "Point-in-room", detail: "Gets fixture Location.Point → applies inverse link transform → drops to Z=0 → tests every room via IsPointInRoom. Counts by (room_id, type_id) pair.", color: "#185FA5", fill: "#B5D4F4" },
+    { n: 5, label: "Build rows", detail: "Assembles: room #, name, area, IESNA auto-match, Type Mark, Family Name, Type Name, fixture count, wattage. Sorted by room # then Type Mark.", color: "#533AB7", fill: "#CECBF6" },
+    { n: 6, label: "Excel inject", detail: "Reads template as ZIP → patches sheet XMLs directly → writes output. Drops calcChain.xml entirely. No openpyxl write path — preserves all conditional formatting.", color: "#1D9E75", fill: "#9FE1CB" },
+  ],
+  quickStart: ["Open MEP/Electrical host model with arch link loaded", "BIMBridge tab → Lighting panel → click LPD Analysis", "Select linked arch model (auto if only one)", "Choose save location for output .xlsx", "Review col D IESNA type dropdowns — auto-matched, spot-check", "Summary tab: check whole-building LPD vs. allowable"],
+  relatedTools: [
+    { name: "Light Fixture Schedule Builder", panel: "Lighting.panel", color: "#185FA5", bg: "#1F3A5220" },
+    { name: "Wire & Conduit Sizer", panel: "Power.panel", color: "#854F0B", bg: "#3D250920" },
+    { name: "MEP Load Calc", panel: "schedules/", color: "#1D9E75", bg: "#0F3D2820" },
+    { name: "Family Field Audit", panel: "RevIRS.panel", color: "#533AB7", bg: "#2A1D5E20" },
+  ],
+  knownIssues: ["Families missing Apparent Power / Power Factor → blank wattage + flag. Needs family standardization pass.", "Hybrid room numbering (e.g. 1A-101) may sort unexpectedly.", "After col D dropdown change, some cells may need Ctrl+Alt+F9 for full recalc."],
+  planned: [{ text: "COMcheck .ccx export", done: false }, { text: "Sustainability report export", done: false }, { text: "Fixture wattage parameter standardization script", done: false }, { text: "Support for fixtures in linked models", done: false }],
+  tasks: [{ text: "Confirm COMcheck space type string alignment vs. internal strings", done: false }, { text: "Test on Revit 2025 — verify ElementId.Value path works", done: false }, { text: "Add fixtures-processed counter to script output window", done: false }, { text: "Get sustainability committee input on report format", done: false }, { text: "Document edge case: multiple linked arch models per run", done: false }],
+};
+
+function useDark() {
+  const [dark, setDark] = useState(() => window.matchMedia("(prefers-color-scheme: dark)").matches);
+  useEffect(() => { const mq = window.matchMedia("(prefers-color-scheme: dark)"); const h = e => setDark(e.matches); mq.addEventListener("change", h); return () => mq.removeEventListener("change", h); }, []);
+  return dark;
+}
+
+function Badge({ label, color, bg }) { return <span style={{ background: bg, color, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", padding: "3px 10px", borderRadius: 20, textTransform: "uppercase", border: `1px solid ${color}44`, whiteSpace: "nowrap" }}>{label}</span>; }
+function SectionLabel({ title, count }) { return <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--color-text-secondary)", paddingBottom: 10, display: "flex", alignItems: "center", gap: 8 }}>{title}{count != null && <span style={{ background: "var(--color-background-secondary)", color: "var(--color-text-secondary)", fontSize: 10, padding: "1px 7px", borderRadius: 20 }}>{count}</span>}</div>; }
+
+function Collapse({ title, icon, badge, defaultOpen = false, children }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div style={{ border: "0.5px solid var(--color-border-tertiary)", borderRadius: 10, overflow: "hidden", marginBottom: 10 }}>
+      <button onClick={() => setOpen(o => !o)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 16px", background: "var(--color-background-primary)", border: "none", cursor: "pointer" }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)" }}>{icon && <span>{icon}</span>}{title}</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>{badge}<span style={{ color: "var(--color-text-secondary)", fontSize: 11, transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.18s", display: "inline-block" }}>▾</span></span>
+      </button>
+      {open && <div style={{ borderTop: "0.5px solid var(--color-border-tertiary)" }}>{children}</div>}
+    </div>
+  );
+}
+
+function MD({ src }) {
+  const lines = src.split("\n"); const els = []; let i = 0;
+  while (i < lines.length) {
+    const l = lines[i];
+    if (l.startsWith("# ")) els.push(<h1 key={i} style={{ fontSize: 16, fontWeight: 700, margin: "16px 0 6px", color: "var(--color-text-primary)" }}>{l.slice(2)}</h1>);
+    else if (l.startsWith("## ")) els.push(<h2 key={i} style={{ fontSize: 14, fontWeight: 600, margin: "14px 0 5px", color: "var(--color-text-primary)", borderBottom: "0.5px solid var(--color-border-tertiary)", paddingBottom: 4 }}>{l.slice(3)}</h2>);
+    else if (l.startsWith("### ")) els.push(<h3 key={i} style={{ fontSize: 13, fontWeight: 600, margin: "12px 0 4px", color: "var(--color-text-primary)" }}>{l.slice(4)}</h3>);
+    else if (l.startsWith("- [ ] ") || l.startsWith("- [x] ")) { const done = l.startsWith("- [x] "); els.push(<div key={i} style={{ display: "flex", alignItems: "center", gap: 8, margin: "3px 0", fontSize: 12 }}><span style={{ width: 12, height: 12, border: `1.5px solid ${done ? "#1D9E75" : "var(--color-border-secondary)"}`, borderRadius: 3, background: done ? "#1D9E75" : "transparent", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{done && <span style={{ color: "#fff", fontSize: 8 }}>✓</span>}</span><span style={{ color: "var(--color-text-primary)" }}>{l.slice(6)}</span></div>); }
+    else if (l.startsWith("- ")) els.push(<div key={i} style={{ display: "flex", gap: 8, margin: "2px 0", fontSize: 12 }}><span style={{ color: "var(--color-text-secondary)", flexShrink: 0 }}>·</span><span style={{ color: "var(--color-text-primary)", lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: l.slice(2).replace(/`([^`]+)`/g, '<code style="background:var(--color-background-tertiary);padding:1px 4px;border-radius:3px;font-size:10px">$1</code>') }} /></div>);
+    else if (l.startsWith("```")) { const code = []; i++; while (i < lines.length && !lines[i].startsWith("```")) { code.push(lines[i]); i++; } els.push(<pre key={`c${i}`} style={{ background: "var(--color-background-tertiary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: 6, padding: "10px 14px", fontSize: 11, overflowX: "auto", margin: "8px 0", lineHeight: 1.6 }}><code>{code.join("\n")}</code></pre>); }
+    else if (l.startsWith("| ")) { const rows = []; while (i < lines.length && lines[i].startsWith("|")) { rows.push(lines[i]); i++; } const heads = rows[0].split("|").filter(c => c.trim()).map(c => c.trim()); const body = rows.slice(2).map(r => r.split("|").filter(c => c.trim()).map(c => c.trim())); els.push(<div key={`t${i}`} style={{ overflowX: "auto", margin: "8px 0" }}><table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}><thead><tr>{heads.map((h, j) => <th key={j} style={{ textAlign: "left", padding: "5px 8px", borderBottom: "1px solid var(--color-border-secondary)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: "var(--color-text-secondary)" }}>{h}</th>)}</tr></thead><tbody>{body.map((r, j) => <tr key={j} style={{ borderBottom: "0.5px solid var(--color-border-tertiary)" }}>{r.map((c, k) => <td key={k} style={{ padding: "5px 8px", fontSize: 12, color: "var(--color-text-primary)" }}>{c}</td>)}</tr>)}</tbody></table></div>); continue; }
+    else if (l.trim() === "---") els.push(<hr key={i} style={{ border: "none", borderTop: "0.5px solid var(--color-border-tertiary)", margin: "12px 0" }} />);
+    else if (l.trim()) { const html = l.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>").replace(/`([^`]+)`/g, '<code style="background:var(--color-background-tertiary);padding:1px 4px;border-radius:3px;font-size:10px">$1</code>'); els.push(<p key={i} style={{ fontSize: 12, lineHeight: 1.7, margin: "4px 0", color: "var(--color-text-primary)" }} dangerouslySetInnerHTML={{ __html: html }} />); }
+    i++;
+  }
+  return <div>{els}</div>;
+}
+
+function CircuitMap({ dark }) {
+  const [hovered, setHovered] = useState(null);
+  const C = {
+    blue:   { stroke: "#378ADD", fill: dark ? "#0C447C" : "#E6F1FB", text: dark ? "#B5D4F4" : "#185FA5" },
+    purple: { stroke: "#7F77DD", fill: dark ? "#3C3489" : "#EEEDFE", text: dark ? "#CECBF6" : "#533AB7" },
+    amber:  { stroke: "#BA7517", fill: dark ? "#633806" : "#FAEEDA", text: dark ? "#FAC775" : "#854F0B" },
+    green:  { stroke: "#1D9E75", fill: dark ? "#085041" : "#E1F5EE", text: dark ? "#9FE1CB" : "#0F6E56" },
+    gray:   { stroke: "#888780", fill: dark ? "#444441" : "#F1EFE8", text: dark ? "#D3D1C7" : "#5F5E5A" },
+    wire: dark ? "#555" : "#bbb", grid: dark ? "rgba(255,255,255,0.035)" : "rgba(0,0,0,0.045)",
+    tipBg: dark ? "#2C2C2A" : "#fff", tipBorder: dark ? "#444" : "#ccc", tipText: dark ? "#D3D1C7" : "#3d3d3a",
+    legendBg: dark ? "#242422" : "#F8F8F6", legendBorder: dark ? "#3a3a38" : "#d0d0c8",
+  };
+  const nodes = [
+    { id: "repo",   x: 310, y:  28, w: 200, h: 38, label: "bimbridge repo",       c: "blue",   tip: "GitHub source of truth — all scripts, docs, templates." },
+    { id: "sched",  x:  30, y: 120, w: 150, h: 34, label: "schedules/",           c: "green",  tip: "Python/Flask web apps for MEP calculations." },
+    { id: "revit",  x: 610, y: 120, w: 150, h: 34, label: "revit/",               c: "blue",   tip: "All pyRevit extension tools." },
+    { id: "mep",    x:  20, y: 212, w: 170, h: 34, label: "MEP Load Calc",        c: "green",  tip: "Flask app · localhost:5757 · Status: Production" },
+    { id: "ext",    x: 560, y: 212, w: 220, h: 34, label: "BIMBridge.extension/", c: "blue",   tip: "pyRevit extension — the full BIMBridge ribbon tab." },
+    { id: "pLight", x: 400, y: 318, w: 120, h: 32, label: "Lighting.panel",       c: "amber",  tip: "LPD Analysis + Light Fixture Schedule Builder" },
+    { id: "pPower", x: 534, y: 318, w: 120, h: 32, label: "Power.panel",          c: "amber",  tip: "Wire & Conduit Sizer" },
+    { id: "pOther", x: 668, y: 318, w: 130, h: 32, label: "+ 2 panels",           c: "gray",   tip: "Equipment Sync (3 tools) + RevIRS.panel" },
+    { id: "lpd",    x: 374, y: 422, w: 152, h: 44, label: "LPD Analysis",         c: "green",  tip: "⭐ YOU ARE HERE · Status: Production", active: true },
+    { id: "lfsb",   x: 538, y: 430, w: 112, h: 30, label: "Fixture Schedule",     c: "gray",   tip: "Light Fixture Schedule Builder · Stable / Needs Work" },
+    { id: "revirs", x: 660, y: 430, w: 130, h: 30, label: "Family Audit",         c: "purple", tip: "Family Field Audit (RevIRS) · Status: Production" },
+  ];
+  const nm = {}; nodes.forEach(n => nm[n.id] = n);
+  const bx = id => nm[id].x + nm[id].w / 2; const by = id => nm[id].y + nm[id].h;
+  const tx = id => nm[id].x + nm[id].w / 2; const ty = id => nm[id].y;
+  const edges = [
+    { f: "repo", t: "sched", active: false }, { f: "repo", t: "revit", active: true },
+    { f: "sched", t: "mep", active: false }, { f: "revit", t: "ext", active: true },
+    { f: "ext", t: "pLight", active: true }, { f: "ext", t: "pPower", active: false },
+    { f: "ext", t: "pOther", active: false }, { f: "pLight", t: "lpd", active: true },
+    { f: "pLight", t: "lfsb", active: false }, { f: "pOther", t: "revirs", active: false },
+  ];
+  const SVG_W = 820; const SVG_H = 555;
+  return (
+    <div style={{ position: "relative", background: dark ? "#1a1a18" : "#fafaf8", borderRadius: 12 }}>
+      <svg width="100%" viewBox={`0 0 ${SVG_W} ${SVG_H}`} style={{ display: "block" }}>
+        <defs>
+          <marker id="arrowGreen" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#1D9E75" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></marker>
+          <marker id="arrowGray" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke={C.wire} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></marker>
+          <marker id="arrowHover" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#378ADD" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></marker>
+        </defs>
+        {Array.from({ length: 18 }, (_, i) => <line key={`v${i}`} x1={i*48} y1={0} x2={i*48} y2={SVG_H} stroke={C.grid} strokeWidth="1" />)}
+        {Array.from({ length: 12 }, (_, i) => <line key={`h${i}`} x1={0} y1={i*48} x2={SVG_W} y2={i*48} stroke={C.grid} strokeWidth="1" />)}
+        {edges.map(({ f, t, active }) => {
+          const fx = bx(f), fy = by(f), ttx = tx(t), tty = ty(t), mid = Math.round((fy + tty) / 2);
+          const hovering = hovered === f || hovered === t;
+          const stroke = hovering ? "#378ADD" : active ? "#1D9E75" : C.wire;
+          const markerId = hovering ? "arrowHover" : active ? "arrowGreen" : "arrowGray";
+          const strokeW = hovering ? 2 : active ? 1.6 : 0.8;
+          const d = `M ${fx} ${fy} L ${fx} ${mid} L ${ttx} ${mid} L ${ttx} ${tty}`;
+          return <g key={`${f}-${t}`}>
+            {active && !hovering && <path d={d} fill="none" stroke="#1D9E75" strokeWidth="5" opacity="0.08" strokeLinecap="round" />}
+            <path d={d} fill="none" stroke={stroke} strokeWidth={strokeW} strokeLinecap="round" markerEnd={`url(#${markerId})`} opacity={hovering ? 1 : active ? 0.85 : 0.6} />
+            <circle cx={fx} cy={fy} r="3" fill={hovering ? "#378ADD" : active ? "#1D9E75" : C.wire} opacity={hovering ? 1 : active ? 0.8 : 0.5} />
+          </g>;
+        })}
+        {nodes.map(n => {
+          const col = C[n.c]; const isHov = hovered === n.id;
+          return <g key={n.id} style={{ cursor: "pointer" }} onMouseEnter={() => setHovered(n.id)} onMouseLeave={() => setHovered(null)}>
+            {n.active && <rect x={n.x-6} y={n.y-6} width={n.w+12} height={n.h+12} rx={11} fill="none" stroke="#1D9E75" strokeWidth="1.5" strokeDasharray="6 3" opacity="0.8" />}
+            <rect x={n.x} y={n.y} width={n.w} height={n.h} rx={7} fill={isHov ? col.stroke : col.fill} stroke={col.stroke} strokeWidth={n.active ? 1.5 : 0.75} style={{ transition: "fill 0.15s" }} />
+            <text x={n.x+n.w/2} y={n.y+n.h/2} textAnchor="middle" dominantBaseline="central" fontSize="11" fontWeight={n.active ? "700" : "500"} fill={isHov ? "#fff" : col.text} fontFamily="system-ui, sans-serif" style={{ userSelect: "none", pointerEvents: "none" }}>{n.label}</text>
+            {n.active && !isHov && <circle cx={n.x+n.w-10} cy={n.y+10} r="4" fill="#1D9E75" />}
+          </g>;
+        })}
+        <rect x={16} y={418} width={178} height={108} rx={8} fill={C.legendBg} stroke={C.legendBorder} strokeWidth="0.75" />
+        <text x={28} y={436} fontSize="9" fontWeight="700" letterSpacing="0.1em" fill={dark ? "#777" : "#999"} fontFamily="system-ui, sans-serif">LEGEND</text>
+        {[{ c: "blue", label: "Core / structure" }, { c: "amber", label: "Ribbon panel" }, { c: "green", label: "Production tool" }, { c: "purple", label: "RevIRS tool" }, { c: "gray", label: "Stable / other" }].map((item, i) => {
+          const col = C[item.c];
+          return <g key={i}><rect x={28} y={444+i*14} width={11} height={11} rx={2} fill={col.fill} stroke={col.stroke} strokeWidth="0.85" /><text x={45} y={453+i*14} fontSize="10" fill={dark ? "#B4B2A9" : "#5F5E5A"} fontFamily="system-ui, sans-serif">{item.label}</text></g>;
+        })}
+      </svg>
+      {hovered && nm[hovered] && <div style={{ position: "absolute", bottom: 10, left: "50%", transform: "translateX(-50%)", background: C.tipBg, border: `0.5px solid ${C.tipBorder}`, borderRadius: 8, padding: "7px 14px", fontSize: 12, color: C.tipText, pointerEvents: "none", whiteSpace: "nowrap", zIndex: 10 }}>{nm[hovered].tip}</div>}
+    </div>
+  );
+}
+
+function ExecFlow() {
+  const [active, setActive] = useState(null);
+  const steps = P.execSteps;
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 0, marginBottom: 14, position: "relative" }}>
+        {steps.map((s, i) => (
+          <div key={s.n} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
+            {i < steps.length - 1 && <div style={{ position: "absolute", top: 15, left: "50%", width: "100%", height: 2, background: active === s.n || active === steps[i+1]?.n ? s.color : "var(--color-border-tertiary)", transition: "background 0.2s", zIndex: 0 }} />}
+            <button onClick={() => setActive(active === s.n ? null : s.n)} style={{ width: 30, height: 30, borderRadius: "50%", background: active === s.n ? s.color : s.fill, border: `2px solid ${s.color}`, cursor: "pointer", zIndex: 1, position: "relative", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: active === s.n ? "#fff" : s.color, transition: "background 0.15s, color 0.15s" }}>{s.n}</button>
+            <span style={{ fontSize: 9, fontWeight: 600, color: active === s.n ? s.color : "var(--color-text-secondary)", marginTop: 5, textAlign: "center", maxWidth: 76, lineHeight: 1.3 }}>{s.label}</span>
+          </div>
+        ))}
+      </div>
+      {active ? (() => { const s = steps.find(x => x.n === active); return <div style={{ background: "var(--color-background-secondary)", border: `1px solid ${s.color}44`, borderRadius: 10, padding: "12px 16px", display: "flex", gap: 12, alignItems: "flex-start" }}><div style={{ width: 26, height: 26, borderRadius: "50%", background: s.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0 }}>{s.n}</div><div><div style={{ fontSize: 12, fontWeight: 600, color: s.color, marginBottom: 4 }}>Step {s.n} — {s.label}</div><div style={{ fontSize: 12, color: "var(--color-text-primary)", lineHeight: 1.7 }}>{s.detail}</div></div></div>; })() : <div style={{ fontSize: 11, color: "var(--color-text-secondary)", textAlign: "center", padding: "6px 0" }}>tap a step to expand</div>}
+    </div>
+  );
+}
+
+function FileManifest() {
+  const icons = { ".py": "🐍", ".xlsx": "📊", ".md": "📝", ".bat": "⚙️" };
+  const getIcon = name => { for (const [ext, icon] of Object.entries(icons)) if (name.endsWith(ext)) return icon; return "🖼️"; };
+  return <div>{P.files.map((f, i) => <div key={f.name} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 0", borderBottom: i < P.files.length - 1 ? "0.5px solid var(--color-border-tertiary)" : "none" }}><span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>{getIcon(f.name)}</span><div style={{ flex: 1, minWidth: 0 }}><div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}><a href={f.url} target="_blank" style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-primary)", textDecoration: "none", fontFamily: "monospace" }}>{f.name}</a><span style={{ fontSize: 10, color: "var(--color-text-secondary)", background: "var(--color-background-secondary)", padding: "1px 7px", borderRadius: 20 }}>{f.size}</span></div><div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 2, lineHeight: 1.5 }}>{f.role}</div></div><div style={{ flexShrink: 0, textAlign: "right", minWidth: 110 }}>{f.lastCommit !== "—" ? <><div style={{ fontSize: 10, color: "var(--color-text-secondary)", fontFamily: "monospace" }}>{f.lastCommit}</div><div style={{ fontSize: 10, color: "var(--color-text-secondary)", maxWidth: 130, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.commitMsg}</div></> : <span style={{ fontSize: 10, color: "var(--color-text-secondary)" }}>—</span>}</div></div>)}</div>;
+}
+
+function QuickStart() {
+  const [done, setDone] = useState(Array(P.quickStart.length).fill(false));
+  const toggle = i => setDone(prev => prev.map((v, j) => j === i ? !v : v));
+  const reset = () => setDone(Array(P.quickStart.length).fill(false));
+  const n = done.filter(Boolean).length; const all = n === P.quickStart.length;
+  return (
+    <div>
+      <div style={{ background: "var(--color-background-tertiary)", borderRadius: 10, padding: "14px 16px", marginBottom: 10, border: "0.5px solid var(--color-border-tertiary)" }}>
+        <div style={{ color: "#1D9E75", marginBottom: 8, fontSize: 10, fontFamily: "monospace", fontWeight: 700 }}>// LPD Analysis — run checklist</div>
+        {P.quickStart.map((step, i) => <div key={i} onClick={() => toggle(i)} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "5px 0", cursor: "pointer", borderBottom: i < P.quickStart.length - 1 ? "0.5px solid var(--color-border-tertiary)" : "none" }}><span style={{ color: done[i] ? "#1D9E75" : "var(--color-text-secondary)", flexShrink: 0, fontWeight: 700, fontSize: 12, marginTop: 1, fontFamily: "monospace" }}>{done[i] ? "✓" : `${i+1}.`}</span><span style={{ fontSize: 12, color: done[i] ? "var(--color-text-secondary)" : "var(--color-text-primary)", textDecoration: done[i] ? "line-through" : "none", lineHeight: 1.6 }}>{step}</span></div>)}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        {all ? <span style={{ fontSize: 12, color: "#1D9E75", fontWeight: 600 }}>✓ All steps complete</span> : <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{n} / {P.quickStart.length} steps</span>}
+        <button onClick={reset} style={{ fontSize: 11, color: "var(--color-text-secondary)", background: "none", border: "0.5px solid var(--color-border-tertiary)", borderRadius: 6, padding: "3px 10px", cursor: "pointer" }}>reset</button>
+      </div>
+    </div>
+  );
+}
+
+function TaskList({ items, setItems, accent }) {
+  const toggle = i => setItems(prev => prev.map((t, j) => j === i ? { ...t, done: !t.done } : t));
+  return <div style={{ padding: "4px 16px 10px" }}>{items.map((item, i) => <div key={i} onClick={() => toggle(i)} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "8px 0", cursor: "pointer", borderBottom: i < items.length - 1 ? "0.5px solid var(--color-border-tertiary)" : "none" }}><div style={{ width: 15, height: 15, marginTop: 2, border: `1.5px solid ${item.done ? accent : "var(--color-border-secondary)"}`, borderRadius: 3, background: item.done ? accent : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.15s" }}>{item.done && <span style={{ color: "#fff", fontSize: 8 }}>✓</span>}</div><span style={{ fontSize: 13, color: item.done ? "var(--color-text-secondary)" : "var(--color-text-primary)", textDecoration: item.done ? "line-through" : "none", lineHeight: 1.5 }}>{item.text}</span></div>)}</div>;
+}
+
+function App() {
+  const dark = useDark();
+  const [tab, setTab] = useState("overview");
+  const [tasks, setTasks] = useState(P.tasks);
+  const [planned, setPlanned] = useState(P.planned);
+  const ACCENT = "#1D9E75";
+  const tabs = ["overview", "docs", "circuit", "tasks"];
+  const pillBadge = (n, total, accent) => <span style={{ fontSize: 10, background: n === total ? "#1D9E7520" : "var(--color-background-secondary)", color: n === total ? ACCENT : "var(--color-text-secondary)", padding: "2px 8px", borderRadius: 20, fontWeight: 600 }}>{n}/{total}</span>;
+
+  return (
+    <div style={{ fontFamily: "system-ui, -apple-system, sans-serif", maxWidth: 680, margin: "0 auto", paddingBottom: 48 }}>
+      <div style={{ paddingTop: 20, paddingBottom: 16, borderBottom: "0.5px solid var(--color-border-tertiary)", marginBottom: 20 }}>
+        <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+          <div style={{ width: 52, height: 52, borderRadius: 12, background: dark ? "#0F3D28" : "#E1F5EE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, flexShrink: 0, border: `1px solid ${ACCENT}44` }}>{P.emoji}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 4 }}>
+              <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: "var(--color-text-primary)" }}>{P.name}</h1>
+              <Badge label={P.status} color={ACCENT} bg={dark ? "#0F3D28" : "#E1F5EE"} />
+            </div>
+            <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: "0 0 8px", lineHeight: 1.5 }}>{P.tagline}</p>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+              {P.category.map(c => <span key={c} style={{ fontSize: 10, background: "var(--color-background-secondary)", color: "var(--color-text-secondary)", padding: "2px 8px", borderRadius: 20, border: "0.5px solid var(--color-border-tertiary)" }}>{c}</span>)}
+              <a href={P.githubUrl} target="_blank" style={{ fontSize: 11, color: ACCENT, textDecoration: "none", fontWeight: 600, marginLeft: 4 }}>↗ GitHub</a>
+            </div>
+          </div>
+        </div>
+        <div style={{ marginTop: 10, fontSize: 11, color: "var(--color-text-secondary)", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+          <span>Part of</span>
+          <a href={P.parentUrl} target="_blank" style={{ color: "var(--color-text-info)", textDecoration: "none", fontWeight: 600 }}>{P.parentProject} ↗</a>
+          <span style={{ opacity: 0.3 }}>·</span>
+          <code style={{ fontSize: 10, background: "var(--color-background-secondary)", padding: "1px 6px", borderRadius: 4 }}>{P.githubFolder}</code>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", borderBottom: "0.5px solid var(--color-border-tertiary)", marginBottom: 22 }}>
+        {tabs.map(t => <button key={t} onClick={() => setTab(t)} style={{ background: "none", border: "none", cursor: "pointer", padding: "8px 16px", fontSize: 13, fontWeight: tab === t ? 600 : 400, color: tab === t ? ACCENT : "var(--color-text-secondary)", borderBottom: `2px solid ${tab === t ? ACCENT : "transparent"}`, transition: "all 0.15s" }}>{t === "circuit" ? "Circuit Map" : t.charAt(0).toUpperCase() + t.slice(1)}</button>)}
+      </div>
+
+      {tab === "overview" && (
+        <div>
+          <SectionLabel title="At a glance" />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 22 }}>
+            {P.metrics.map(m => <div key={m.label} style={{ background: "var(--color-background-secondary)", borderRadius: 10, padding: "12px 14px" }}><div style={{ fontSize: 10, color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 600, marginBottom: 4 }}>{m.label}</div><div style={{ fontSize: 22, fontWeight: 700, color: "var(--color-text-primary)", lineHeight: 1 }}>{m.value}</div></div>)}
+          </div>
+          <SectionLabel title="Tech stack" />
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 22 }}>
+            {P.techStack.map(t => <span key={t} style={{ fontSize: 12, padding: "5px 12px", borderRadius: 20, background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-secondary)", color: "var(--color-text-primary)", fontWeight: 500 }}>{t}</span>)}
+          </div>
+          <SectionLabel title="Execution flow — click any step" />
+          <div style={{ marginBottom: 22 }}><ExecFlow /></div>
+          <SectionLabel title="Quick-start checklist" />
+          <div style={{ marginBottom: 22 }}><QuickStart /></div>
+          <SectionLabel title="File manifest" count={P.files.length} />
+          <div style={{ border: "0.5px solid var(--color-border-tertiary)", borderRadius: 10, padding: "0 16px", marginBottom: 22 }}><FileManifest /></div>
+          <SectionLabel title="Related tools in BIMBridge" />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8, marginBottom: 22 }}>
+            {P.relatedTools.map(tool => <div key={tool.name} style={{ background: tool.bg, border: `0.5px solid ${tool.color}44`, borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}><span style={{ fontSize: 18 }}>🔧</span><div><div style={{ fontSize: 12, fontWeight: 600, color: tool.color }}>{tool.name}</div><div style={{ fontSize: 10, color: tool.color, opacity: 0.7, marginTop: 1 }}>{tool.panel}</div></div></div>)}
+          </div>
+          <Collapse title="Known issues" icon="⚠️" badge={<span style={{ fontSize: 10, background: dark ? "#501313" : "#FCEBEB", color: "#E24B4A", padding: "2px 7px", borderRadius: 20, fontWeight: 600 }}>{P.knownIssues.length}</span>}>
+            <div style={{ padding: "12px 16px" }}>
+              {P.knownIssues.map((issue, i) => <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "7px 10px", marginBottom: 6, background: dark ? "#50131320" : "#FCEBEB", borderRadius: 8, border: "0.5px solid #E24B4A33" }}><span style={{ color: "#E24B4A", flexShrink: 0 }}>⚠</span><span style={{ fontSize: 12, color: dark ? "#F09595" : "#A32D2D", lineHeight: 1.6 }}>{issue}</span></div>)}
+            </div>
+          </Collapse>
+        </div>
+      )}
+
+      {tab === "docs" && (
+        <div>
+          <p style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 16, lineHeight: 1.7 }}>Embedded at last build from GitHub. Connect GitHub to Notion (Settings → Connections → GitHub) for live-refreshing embeds on the Notion page.</p>
+          <Collapse title="README.md" icon="📖" defaultOpen={true}><div style={{ padding: "16px 20px", maxHeight: 480, overflowY: "auto" }}><MD src={README_CONTENT} /></div></Collapse>
+          <Collapse title="LPD_Analysis_Context.md" icon="🗂️"><div style={{ padding: "16px 20px", maxHeight: 480, overflowY: "auto" }}><MD src={CONTEXT_CONTENT} /></div></Collapse>
+        </div>
+      )}
+
+      {tab === "circuit" && (
+        <div>
+          <p style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 12, lineHeight: 1.7 }}>Full repo as a circuit layout. Hover any node to see status. Green dashed ring = active project.</p>
+          <CircuitMap dark={dark} />
+          <div style={{ marginTop: 10, fontSize: 11, color: "var(--color-text-secondary)" }}>Path: <code style={{ fontSize: 10, background: "var(--color-background-secondary)", padding: "1px 6px", borderRadius: 4 }}>{P.githubFolder}</code></div>
+        </div>
+      )}
+
+      {tab === "tasks" && (
+        <div>
+          <p style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 16, lineHeight: 1.7 }}>Session-only — state resets on reload. Use the Notion page for persistence.</p>
+          <Collapse title="Active tasks" icon="⚡" defaultOpen={true} badge={pillBadge(tasks.filter(t=>t.done).length, tasks.length, ACCENT)}><TaskList items={tasks} setItems={setTasks} accent={ACCENT} /></Collapse>
+          <Collapse title="Planned enhancements" icon="🔮" badge={pillBadge(planned.filter(t=>t.done).length, planned.length, "#185FA5")}><TaskList items={planned} setItems={setPlanned} accent="#185FA5" /></Collapse>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>
