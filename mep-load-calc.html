@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MEP Load Calc — BIMBridge Project Hub</title>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --color-background-primary: #ffffff; --color-background-secondary: #f5f5f3;
+    --color-background-tertiary: #edede9; --color-text-primary: #1a1a18;
+    --color-text-secondary: #6b6b68; --color-text-info: #185FA5;
+    --color-border-primary: #c8c8c4; --color-border-secondary: #ddddd8; --color-border-tertiary: #e8e8e4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-background-primary: #1e1e1c; --color-background-secondary: #2a2a27;
+      --color-background-tertiary: #313130; --color-text-primary: #e8e8e4;
+      --color-text-secondary: #9a9a94; --color-text-info: #7ab8f5;
+      --color-border-primary: #4a4a46; --color-border-secondary: #3a3a37; --color-border-tertiary: #303030;
+    }
+  }
+  html, body { background: var(--color-background-primary); color: var(--color-text-primary); font-family: system-ui, -apple-system, sans-serif; min-height: 100vh; }
+  #root { padding: 0 24px; max-width: 900px; margin: 0 auto; }
+  * { -webkit-font-smoothing: antialiased; }
+  a { color: inherit; } button { font-family: inherit; } code, pre { font-family: ui-monospace, "SF Mono", monospace; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--color-border-secondary); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const P = {
+  name: "MEP Load Calc",
+  emoji: "⚡",
+  tagline: "MEP equipment schedules → NEC-compliant electrical load calculations. Automated.",
+  status: "Production",
+  statusColor: "#1D9E75",
+  category: ["BIMBridge", "Schedules", "Electrical", "MEP", "NEC"],
+  githubUrl: "https://github.com/bradlittlefield/bimbridge/tree/main/schedules/MEP_Load_Calc",
+  githubFolder: "schedules/MEP_Load_Calc",
+  parentProject: "BIMBridge",
+  parentUrl: "https://github.com/bradlittlefield/bimbridge",
+  metrics: [
+    { label: "Output sheets", value: "3" },
+    { label: "Schedule types", value: "2" },
+    { label: "NEC tables", value: "430" },
+    { label: "Runtime", value: "<30s" }
+  ],
+  techStack: ["Flask", "Python", "pandas", "openpyxl", "NEC 2023", "Excel XML"],
+  files: [
+    { name: "app.py", size: "~85 KB", role: "Main Flask web application (localhost:5757)", lastCommit: "2026-05-12", commitMsg: "VRF edge case improvements", url: "https://github.com/bradlittlefield/bimbridge/blob/main/schedules/MEP_Load_Calc/app.py" },
+    { name: "requirements.txt", size: "312 B", role: "Python dependencies", lastCommit: "2026-05-10", commitMsg: "Update pandas", url: "https://github.com/bradlittlefield/bimbridge/blob/main/schedules/MEP_Load_Calc/requirements.txt" },
+    { name: "MEP_Load_Calc_Context.md", size: "—", role: "Full technical reference & known gaps", lastCommit: "2026-05-12", commitMsg: "Update combine feature notes", url: "https://github.com/bradlittlefield/bimbridge/blob/main/schedules/MEP_Load_Calc/MEP_Load_Calc_Context.md" },
+    { name: "templates/", size: "—", role: "HTML templates + static assets", lastCommit: "2026-05-11", commitMsg: "UI polish", url: "https://github.com/bradlittlefield/bimbridge/tree/main/schedules/MEP_Load_Calc/templates" },
+    { name: "static/", size: "—", role: "CSS / JS for web UI", lastCommit: "2026-05-11", commitMsg: "Dark mode support", url: "https://github.com/bradlittlefield/bimbridge/tree/main/schedules/MEP_Load_Calc/static" },
+  ],
+  execSteps: [
+    { n: 1, label: "Launch App", detail: "Start Flask server (python app.py) and open localhost:5757", color: "#185FA5", fill: "#B5D4F4" },
+    { n: 2, label: "Upload Schedules", detail: "Drag & drop one or more mech/plumbing Excel files. Auto-detects headers and schedule type (standard or VRF split).", color: "#533AB7", fill: "#CECBF6" },
+    { n: 3, label: "Parse & Calculate", detail: "Column role detection, tag-prefix PF lookup, FLA/VA per NEC 430.248/430.250, MCA bypass for large units.", color: "#854F0B", fill: "#FAC775" },
+    { n: 4, label: "Combine Mode", detail: "Merge multiple files into unified job calculation with consistent numbering.", color: "#1D9E75", fill: "#9FE1CB" },
+    { n: 5, label: "Generate Excel", detail: "Outputs 3 sheets: VA Summary (live SUMPRODUCT), All Circuits (toggle include), Parse Log (warnings).", color: "#185FA5", fill: "#B5D4F4" },
+    { n: 6, label: "Review & Feed Forward", detail: "Check Parse Log, refine inputs, then use with BIMBridge Reconcile for Revit sync.", color: "#533AB7", fill: "#CECBF6" },
+  ],
+  quickStart: [
+    "cd schedules/MEP_Load_Calc/",
+    "Run: python app.py (or run.bat)",
+    "Open browser to http://localhost:5757",
+    "Upload equipment schedule Excel file(s)",
+    "Click Process Schedules → download output workbook",
+    "Review VA Summary and Parse Log for flags"
+  ],
+  relatedTools: [
+    { name: "BIMBridge Reconcile", panel: "Planned", color: "#1D9E75", bg: "#0F3D2820" },
+    { name: "LPD Analysis", panel: "Lighting.panel", color: "#185FA5", bg: "#1F3A5220" },
+    { name: "Wire & Conduit Sizer", panel: "Power.panel", color: "#854F0B", bg: "#3D250920" },
+    { name: "Equipment Sync Tools", panel: "Equipment Sync.panel", color: "#533AB7", bg: "#2A1D5E20" },
+  ],
+  knownIssues: [
+    "Generator / emergency load subtotals not yet implemented",
+    "Disconnecting means column deferred",
+    "Combine Schedules strips original Excel formatting",
+    "Rare VRF first-indoor-unit row drop edge case",
+    "PF index may need tuning as new equipment types appear"
+  ],
+  planned: [
+    { text: "Full BIMBridge Reconcile integration (JSON handshake)", done: false },
+    { text: "Generator & emergency load subtotals", done: false },
+    { text: "Disconnecting means + panel schedule export", done: false },
+    { text: "Preserve source formatting in Combine mode", done: false },
+    { text: "Enhanced web UI (dark mode, progress bar)", done: false }
+  ],
+  tasks: [
+    { text: "Test on latest real project schedules (5+ equipment types)", done: false },
+    { text: "Document full column mapping and NEC lookup logic", done: false },
+    { text: "Add unit tests for core calculation paths", done: false },
+    { text: "Implement Reconcile JSON export", done: false }
+  ],
+};
+
+function useDark() {
+  const [dark, setDark] = useState(() => window.matchMedia("(prefers-color-scheme: dark)").matches);
+  useEffect(() => { 
+    const mq = window.matchMedia("(prefers-color-scheme: dark)"); 
+    const h = e => setDark(e.matches); 
+    mq.addEventListener("change", h); 
+    return () => mq.removeEventListener("change", h); 
+  }, []);
+  return dark;
+}
+
+function Badge({ label, color, bg }) { 
+  return React.createElement('span', {
+    style: { background: bg, color, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", padding: "3px 10px", borderRadius: 20, textTransform: "uppercase", border: `1px solid ${color}44`, whiteSpace: "nowrap" }
+  }, label);
+}
+
+function SectionLabel({ title, count }) {
+  return React.createElement('div', {
+    style: { fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--color-text-secondary)", paddingBottom: 10, display: "flex", alignItems: "center", gap: 8 }
+  }, [title, count != null && React.createElement('span', {
+    style: { background: "var(--color-background-secondary)", color: "var(--color-text-secondary)", fontSize: 10, padding: "1px 7px", borderRadius: 20 }
+  }, count)]);
+}
+
+function Collapse({ title, icon, badge, defaultOpen = false, children }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return React.createElement('div', {
+    style: { border: "0.5px solid var(--color-border-tertiary)", borderRadius: 10, overflow: "hidden", marginBottom: 10 }
+  }, [
+    React.createElement('button', {
+      onClick: () => setOpen(o => !o),
+      style: { width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 16px", background: "var(--color-background-primary)", border: "none", cursor: "pointer" }
+    }, [
+      React.createElement('span', {
+        style: { display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)" }
+      }, [icon && React.createElement('span', null, icon), title]),
+      React.createElement('span', {
+        style: { display: "flex", alignItems: "center", gap: 8 }
+      }, [badge, React.createElement('span', {
+        style: { color: "var(--color-text-secondary)", fontSize: 11, transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.18s", display: "inline-block" }
+      }, '▾')])
+    ]),
+    open && React.createElement('div', {
+      style: { borderTop: "0.5px solid var(--color-border-tertiary)" }
+    }, children)
+  ]);
+}
+
+function ExecFlow() {
+  const [active, setActive] = useState(null);
+  const steps = P.execSteps;
+  return React.createElement('div', null, [
+    React.createElement('div', {
+      style: { display: "flex", gap: 0, marginBottom: 14, position: "relative" }
+    }, steps.map((s, i) => 
+      React.createElement('div', {
+        key: s.n,
+        style: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }
+      }, [
+        i < steps.length - 1 && React.createElement('div', {
+          style: { position: "absolute", top: 15, left: "50%", width: "100%", height: 2, background: active===s.n||active===steps[i+1]?.n ? s.color : "var(--color-border-tertiary)", transition: "background 0.2s", zIndex: 0 }
+        }),
+        React.createElement('button', {
+          onClick: () => setActive(active===s.n ? null : s.n),
+          style: { width: 30, height: 30, borderRadius: "50%", background: active===s.n ? s.color : s.fill, border: `2px solid ${s.color}`, cursor: "pointer", zIndex: 1, position: "relative", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: active===s.n ? "#fff" : s.color, transition: "background 0.15s, color 0.15s" }
+        }, s.n),
+        React.createElement('span', {
+          style: { fontSize: 9, fontWeight: 600, color: active===s.n ? s.color : "var(--color-text-secondary)", marginTop: 5, textAlign: "center", maxWidth: 76, lineHeight: 1.3 }
+        }, s.label)
+      ])
+    )),
+    active ? React.createElement('div', {
+      style: { background: "var(--color-background-secondary)", border: `1px solid ${steps.find(x => x.n===active).color}44`, borderRadius: 10, padding: "12px 16px", display: "flex", gap: 12, alignItems: "flex-start" }
+    }, [
+      React.createElement('div', {
+        style: { width: 26, height: 26, borderRadius: "50%", background: steps.find(x => x.n===active).color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0 }
+      }, active),
+      React.createElement('div', null, [
+        React.createElement('div', {
+          style: { fontSize: 12, fontWeight: 600, color: steps.find(x => x.n===active).color, marginBottom: 4 }
+        }, `Step ${active} — ${steps.find(x => x.n===active).label}`),
+        React.createElement('div', {
+          style: { fontSize: 12, color: "var(--color-text-primary)", lineHeight: 1.7 }
+        }, steps.find(x => x.n===active).detail)
+      ])
+    ]) : React.createElement('div', {
+      style: { fontSize: 11, color: "var(--color-text-secondary)", textAlign: "center", padding: "6px 0" }
+    }, "tap a step to expand")
+  ]);
+}
+
+function FileManifest() {
+  const icons = { ".py": "🐍", ".xlsx": "📊", ".md": "📝", ".txt": "📋" };
+  const getIcon = name => { 
+    for (const [ext, icon] of Object.entries(icons)) if (name.endsWith(ext) || name.includes(ext)) return icon; 
+    return "📁"; 
+  };
+  return React.createElement('div', null, 
+    P.files.map((f, i) => React.createElement('div', {
+      key: f.name,
+      style: { display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 0", borderBottom: i < P.files.length-1 ? "0.5px solid var(--color-border-tertiary)" : "none" }
+    }, [
+      React.createElement('span', { style: { fontSize: 18, flexShrink: 0, marginTop: 1 } }, getIcon(f.name)),
+      React.createElement('div', { style: { flex: 1, minWidth: 0 } }, [
+        React.createElement('div', { style: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" } }, [
+          React.createElement('a', { href: f.url, target: "_blank", style: { fontSize: 12, fontWeight: 600, color: "var(--color-text-primary)", textDecoration: "none", fontFamily: "monospace" } }, f.name),
+          React.createElement('span', { style: { fontSize: 10, color: "var(--color-text-secondary)", background: "var(--color-background-secondary)", padding: "1px 7px", borderRadius: 20 } }, f.size)
+        ]),
+        React.createElement('div', { style: { fontSize: 12, color: "var(--color-text-secondary)", marginTop: 2, lineHeight: 1.5 } }, f.role)
+      ]),
+      React.createElement('div', { style: { flexShrink: 0, textAlign: "right", minWidth: 110 } }, 
+        f.lastCommit !== "—" ? React.createElement('div', null, [
+          React.createElement('div', { style: { fontSize: 10, color: "var(--color-text-secondary)", fontFamily: "monospace" } }, f.lastCommit),
+          React.createElement('div', { style: { fontSize: 10, color: "var(--color-text-secondary)", maxWidth: 130, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, f.commitMsg)
+        ]) : React.createElement('span', { style: { fontSize: 10, color: "var(--color-text-secondary)" } }, "—")
+      )
+    ]))
+  );
+}
+
+function QuickStart() {
+  const [done, setDone] = useState(Array(P.quickStart.length).fill(false));
+  const toggle = i => setDone(prev => prev.map((v, j) => j===i ? !v : v));
+  const reset = () => setDone(Array(P.quickStart.length).fill(false));
+  const n = done.filter(Boolean).length;
+  const all = n === P.quickStart.length;
+  return React.createElement('div', null, [
+    React.createElement('div', {
+      style: { background: "var(--color-background-tertiary)", borderRadius: 10, padding: "14px 16px", marginBottom: 10, border: "0.5px solid var(--color-border-tertiary)" }
+    }, [
+      React.createElement('div', {
+        style: { color: "#1D9E75", marginBottom: 8, fontSize: 10, fontFamily: "monospace", fontWeight: 700 }
+      }, "// MEP Load Calc — run checklist"),
+      P.quickStart.map((step, i) => React.createElement('div', {
+        key: i,
+        onClick: () => toggle(i),
+        style: { display: "flex", alignItems: "flex-start", gap: 10, padding: "5px 0", cursor: "pointer", borderBottom: i < P.quickStart.length-1 ? "0.5px solid var(--color-border-tertiary)" : "none" }
+      }, [
+        React.createElement('span', {
+          style: { color: done[i] ? "#1D9E75" : "var(--color-text-secondary)", flexShrink: 0, fontWeight: 700, fontSize: 12, marginTop: 1, fontFamily: "monospace" }
+        }, done[i] ? "✓" : `${i+1}.`),
+        React.createElement('span', {
+          style: { fontSize: 12, color: done[i] ? "var(--color-text-secondary)" : "var(--color-text-primary)", textDecoration: done[i] ? "line-through" : "none", lineHeight: 1.6 }
+        }, step)
+      ]))
+    ]),
+    React.createElement('div', {
+      style: { display: "flex", alignItems: "center", justifyContent: "space-between" }
+    }, [
+      all ? React.createElement('span', { style: { fontSize: 12, color: "#1D9E75", fontWeight: 600 } }, "✓ All steps complete") 
+         : React.createElement('span', { style: { fontSize: 12, color: "var(--color-text-secondary)" } }, `${n} / ${P.quickStart.length} steps`),
+      React.createElement('button', {
+        onClick: reset,
+        style: { fontSize: 11, color: "var(--color-text-secondary)", background: "none", border: "0.5px solid var(--color-border-tertiary)", borderRadius: 6, padding: "3px 10px", cursor: "pointer" }
+      }, "reset")
+    ])
+  ]);
+}
+
+function TaskList({ items, setItems, accent }) {
+  const toggle = i => setItems(prev => prev.map((t, j) => j===i ? {...t, done: !t.done} : t));
+  return React.createElement('div', { style: { padding: "4px 16px 10px" } },
+    items.map((item, i) => React.createElement('div', {
+      key: i,
+      onClick: () => toggle(i),
+      style: { display: "flex", alignItems: "flex-start", gap: 10, padding: "8px 0", cursor: "pointer", borderBottom: i < items.length-1 ? "0.5px solid var(--color-border-tertiary)" : "none" }
+    }, [
+      React.createElement('div', {
+        style: { width: 15, height: 15, marginTop: 2, border: `1.5px solid ${item.done ? accent : "var(--color-border-secondary)"}`, borderRadius: 3, background: item.done ? accent : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.15s" }
+      }, item.done && React.createElement('span', { style: { color: "#fff", fontSize: 8 } }, "✓")),
+      React.createElement('span', {
+        style: { fontSize: 13, color: item.done ? "var(--color-text-secondary)" : "var(--color-text-primary)", textDecoration: item.done ? "line-through" : "none", lineHeight: 1.5 }
+      }, item.text)
+    ]))
+  );
+}
+
+function App() {
+  const dark = useDark();
+  const [tab, setTab] = useState("overview");
+  const [tasks, setTasks] = useState(P.tasks);
+  const [planned, setPlanned] = useState(P.planned);
+  const ACCENT = "#1D9E75";
+  const tabs = ["overview", "circuit", "tasks"];
+
+  return React.createElement('div', { style: { fontFamily: "system-ui,-apple-system,sans-serif", maxWidth: 680, margin: "0 auto", paddingBottom: 48 } }, [
+    // Header
+    React.createElement('div', {
+      style: { paddingTop: 20, paddingBottom: 16, borderBottom: "0.5px solid var(--color-border-tertiary)", marginBottom: 20 }
+    }, [
+      React.createElement('div', { style: { display: "flex", gap: 14, alignItems: "flex-start" } }, [
+        React.createElement('div', {
+          style: { width: 52, height: 52, borderRadius: 12, background: dark ? "#0F3D28" : "#E1F5EE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, flexShrink: 0, border: `1px solid ${ACCENT}44` }
+        }, P.emoji),
+        React.createElement('div', { style: { flex: 1, minWidth: 0 } }, [
+          React.createElement('div', { style: { display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 4 } }, [
+            React.createElement('h1', { style: { fontSize: 22, fontWeight: 700, margin: 0, color: "var(--color-text-primary)" } }, P.name),
+            React.createElement(Badge, { label: P.status, color: ACCENT, bg: dark ? "#0F3D28" : "#E1F5EE" })
+          ]),
+          React.createElement('p', { style: { fontSize: 13, color: "var(--color-text-secondary)", margin: "0 0 8px", lineHeight: 1.5 } }, P.tagline),
+          React.createElement('div', { style: { display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" } }, [
+            ...P.category.map(c => React.createElement('span', {
+              key: c,
+              style: { fontSize: 10, background: "var(--color-background-secondary)", color: "var(--color-text-secondary)", padding: "2px 8px", borderRadius: 20, border: "0.5px solid var(--color-border-tertiary)" }
+            }, c)),
+            React.createElement('a', { href: P.githubUrl, target: "_blank", style: { fontSize: 11, color: ACCENT, textDecoration: "none", fontWeight: 600, marginLeft: 4 } }, "↗ GitHub")
+          ])
+        ])
+      ]),
+      React.createElement('div', {
+        style: { marginTop: 10, fontSize: 11, color: "var(--color-text-secondary)", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }
+      }, [
+        React.createElement('span', null, "Part of"),
+        React.createElement('a', { href: P.parentUrl, target: "_blank", style: { color: "var(--color-text-info)", textDecoration: "none", fontWeight: 600 } }, P.parentProject + " ↗"),
+        React.createElement('span', { style: { opacity: 0.3 } }, "·"),
+        React.createElement('code', { style: { fontSize: 10, background: "var(--color-background-secondary)", padding: "1px 6px", borderRadius: 4 } }, P.githubFolder)
+      ])
+    ]),
+
+    // Tabs
+    React.createElement('div', {
+      style: { display: "flex", borderBottom: "0.5px solid var(--color-border-tertiary)", marginBottom: 22 }
+    }, tabs.map(t => React.createElement('button', {
+      key: t,
+      onClick: () => setTab(t),
+      style: { background: "none", border: "none", cursor: "pointer", padding: "8px 16px", fontSize: 13, fontWeight: tab===t ? 600 : 400, color: tab===t ? ACCENT : "var(--color-text-secondary)", borderBottom: `2px solid ${tab===t ? ACCENT : "transparent"}`, transition: "all 0.15s" }
+    }, t === "circuit" ? "Circuit Map" : t.charAt(0).toUpperCase() + t.slice(1)))),
+
+    tab === "overview" && React.createElement('div', null, [
+      React.createElement(SectionLabel, { title: "At a glance" }),
+      React.createElement('div', {
+        style: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 22 }
+      }, P.metrics.map(m => React.createElement('div', {
+        key: m.label,
+        style: { background: "var(--color-background-secondary)", borderRadius: 10, padding: "12px 14px" }
+      }, [
+        React.createElement('div', { style: { fontSize: 10, color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 600, marginBottom: 4 } }, m.label),
+        React.createElement('div', { style: { fontSize: 22, fontWeight: 700, color: "var(--color-text-primary)", lineHeight: 1 } }, m.value)
+      ]))),
+
+      React.createElement(SectionLabel, { title: "Tech stack" }),
+      React.createElement('div', {
+        style: { display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 22 }
+      }, P.techStack.map(t => React.createElement('span', {
+        key: t,
+        style: { fontSize: 12, padding: "5px 12px", borderRadius: 20, background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-secondary)", color: "var(--color-text-primary)", fontWeight: 500 }
+      }, t))),
+
+      React.createElement(SectionLabel, { title: "Execution flow — click any step" }),
+      React.createElement('div', { style: { marginBottom: 22 } }, React.createElement(ExecFlow)),
+
+      React.createElement(SectionLabel, { title: "Quick-start checklist" }),
+      React.createElement('div', { style: { marginBottom: 22 } }, React.createElement(QuickStart)),
+
+      React.createElement(SectionLabel, { title: "File manifest", count: P.files.length }),
+      React.createElement('div', {
+        style: { border: "0.5px solid var(--color-border-tertiary)", borderRadius: 10, padding: "0 16px", marginBottom: 22 }
+      }, React.createElement(FileManifest)),
+
+      React.createElement(SectionLabel, { title: "Related tools in BIMBridge" }),
+      React.createElement('div', {
+        style: { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8, marginBottom: 22 }
+      }, P.relatedTools.map(tool => React.createElement('div', {
+        key: tool.name,
+        style: { background: tool.bg, border: `0.5px solid ${tool.color}44`, borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }
+      }, [
+        React.createElement('span', { style: { fontSize: 18 } }, "🔧"),
+        React.createElement('div', null, [
+          React.createElement('div', { style: { fontSize: 12, fontWeight: 600, color: tool.color } }, tool.name),
+          React.createElement('div', { style: { fontSize: 10, color: tool.color, opacity: 0.7, marginTop: 1 } }, tool.panel)
+        ])
+      ]))),
+
+      React.createElement(Collapse, {
+        title: "Known issues",
+        icon: "⚠️",
+        badge: React.createElement('span', {
+          style: { fontSize: 10, background: dark ? "#501313" : "#FCEBEB", color: "#E24B4A", padding: "2px 7px", borderRadius: 20, fontWeight: 600 }
+        }, P.knownIssues.length)
+      }, React.createElement('div', { style: { padding: "12px 16px" } },
+        P.knownIssues.map((issue, i) => React.createElement('div', {
+          key: i,
+          style: { display: "flex", gap: 10, alignItems: "flex-start", padding: "7px 10px", marginBottom: 6, background: dark ? "#50131320" : "#FCEBEB", borderRadius: 8, border: "0.5px solid #E24B4A33" }
+        }, [
+          React.createElement('span', { style: { color: "#E24B4A", flexShrink: 0 } }, "⚠"),
+          React.createElement('span', { style: { fontSize: 12, color: dark ? "#F09595" : "#A32D2D", lineHeight: 1.6 } }, issue)
+        ]))
+      ))
+    ]),
+
+    tab === "circuit" && React.createElement('div', null, [
+      React.createElement('p', {
+        style: { fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 12, lineHeight: 1.7 }
+      }, "Full repo as a circuit layout. Hover any node to see status. Green dashed ring = active project."),
+      React.createElement('div', { style: { textAlign: "center", padding: "80px 20px", color: "var(--color-text-secondary)", border: "1px dashed var(--color-border-tertiary)", borderRadius: 12 } }, 
+        "Circuit Map coming soon (will match LPD Analysis style)")
+    ]),
+
+    tab === "tasks" && React.createElement('div', null, [
+      React.createElement('p', {
+        style: { fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 16, lineHeight: 1.7 }
+      }, "Session-only — state resets on reload. Use the Notion page for persistence."),
+      React.createElement(Collapse, {
+        title: "Active tasks",
+        icon: "⚡",
+        defaultOpen: true,
+        badge: React.createElement('span', { style: { fontSize: 10, background: "#1D9E7520", color: ACCENT, padding: "2px 8px", borderRadius: 20, fontWeight: 600 } }, `${tasks.filter(t=>t.done).length}/${tasks.length}`)
+      }, React.createElement(TaskList, { items: tasks, setItems: setTasks, accent: ACCENT })),
+      React.createElement(Collapse, {
+        title: "Planned enhancements",
+        icon: "🔮",
+        badge: React.createElement('span', { style: { fontSize: 10, background: "#185FA520", color: "#185FA5", padding: "2px 8px", borderRadius: 20, fontWeight: 600 } }, `${planned.filter(t=>t.done).length}/${planned.length}`)
+      }, React.createElement(TaskList, { items: planned, setItems: setPlanned, accent: "#185FA5" }))
+    ])
+  ]);
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(React.createElement(App));
+</script>
+</body>
+</html>
