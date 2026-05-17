@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BIMBridge Reconcile — Project Path</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0e0e0c; --bg2: #161614; --bg3: #1e1e1b;
+  --border: #2a2a26; --border2: #353530;
+  --text: #e8e6de; --muted: #6b6960; --muted2: #9a9488;
+  --amber: #C97B1A; --amber-dim: #7a4a0f; --amber-glow: rgba(201,123,26,0.12);
+  --blue: #378ADD; --blue-dim: #1a4a7a;
+  --green: #1D9E75; --green-dim: #0a4a35;
+  --purple: #7F77DD; --purple-dim: #3a3489;
+  --teal: #2ABFB0; --teal-dim: #0a5a54;
+}
+html { background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; }
+body { min-height: 100vh; padding: 40px 24px 80px; }
+.page { max-width: 960px; margin: 0 auto; }
+.header { margin-bottom: 48px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+.header-eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.15em; color: var(--amber); text-transform: uppercase; margin-bottom: 12px; }
+.header h1 { font-family: 'IBM Plex Mono', monospace; font-size: 28px; font-weight: 700; color: var(--text); line-height: 1.2; margin-bottom: 8px; }
+.header h1 span { color: var(--amber); }
+.header-sub { font-size: 14px; color: var(--muted2); line-height: 1.6; max-width: 600px; }
+.header-meta { margin-top: 16px; display: flex; gap: 20px; flex-wrap: wrap; }
+.meta-pill { font-family: 'IBM Plex Mono', monospace; font-size: 10px; padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border2); color: var(--muted2); }
+.track { display: flex; flex-direction: column; gap: 0; }
+.phase { position: relative; }
+.phase-connector { width: 2px; background: var(--border2); margin-left: 23px; height: 32px; position: relative; }
+.phase-connector.active { background: var(--amber-dim); }
+.phase-connector::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid var(--border2); }
+.phase-connector.active::after { border-top-color: var(--amber-dim); }
+.phase-card { display: grid; grid-template-columns: 48px 1fr; gap: 0 16px; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; transition: border-color 0.2s; }
+.phase-card:hover { border-color: var(--border2); }
+.phase-card.current { border-color: var(--amber-dim); background: linear-gradient(135deg, var(--bg2) 0%, rgba(201,123,26,0.04) 100%); }
+.phase-card.future { opacity: 0.65; }
+.phase-num { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 20px 0; background: var(--bg3); border-right: 1px solid var(--border); gap: 8px; }
+.phase-num .num { font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 700; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--bg); border: 1px solid var(--border2); color: var(--muted2); }
+.phase-card.current .phase-num .num { background: var(--amber-glow); border-color: var(--amber); color: var(--amber); }
+.phase-card.done .phase-num .num { background: rgba(29,158,117,0.1); border-color: var(--green); color: var(--green); }
+.phase-body { padding: 20px 20px 20px 0; }
+.phase-tag { font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.phase-title { font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 8px; line-height: 1.3; }
+.phase-card.current .phase-title { color: var(--amber); }
+.phase-desc { font-size: 12px; color: var(--muted2); line-height: 1.7; margin-bottom: 12px; }
+.deliverables { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.deliverable { font-family: 'IBM Plex Mono', monospace; font-size: 10px; padding: 3px 8px; border-radius: 3px; }
+.deliverable.file { background: rgba(55,138,221,0.08); border: 1px solid rgba(55,138,221,0.2); color: var(--blue); }
+.deliverable.script { background: rgba(127,119,221,0.08); border: 1px solid rgba(127,119,221,0.2); color: var(--purple); }
+.deliverable.output { background: rgba(29,158,117,0.08); border: 1px solid rgba(29,158,117,0.2); color: var(--green); }
+.deliverable.config { background: rgba(201,123,26,0.08); border: 1px solid rgba(201,123,26,0.2); color: var(--amber); }
+.deliverable.upgrade { background: rgba(42,191,176,0.08); border: 1px solid rgba(42,191,176,0.2); color: var(--teal); }
+.deps { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.dep-label { font-size: 10px; color: var(--muted); }
+.dep { font-family: 'IBM Plex Mono', monospace; font-size: 10px; padding: 2px 7px; border-radius: 3px; background: var(--bg3); border: 1px solid var(--border); color: var(--muted2); }
+.dep.active { border-color: var(--amber-dim); color: var(--amber); background: var(--amber-glow); }
+.tasks { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; display: flex; flex-direction: column; gap: 5px; }
+.task { display: flex; gap: 8px; align-items: flex-start; font-size: 11px; color: var(--muted2); line-height: 1.5; }
+.task-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--border2); flex-shrink: 0; margin-top: 5px; }
+.task-dot.amber { background: var(--amber); }
+.section-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 40px 0 16px; display: flex; align-items: center; gap: 12px; }
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.finals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
+.final-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+.final-card.gold { border-color: var(--amber-dim); background: linear-gradient(135deg, var(--bg2), var(--amber-glow)); }
+.final-card.emerald { border-color: var(--green-dim); background: linear-gradient(135deg, var(--bg2), rgba(29,158,117,0.06)); }
+.final-card.sapphire { border-color: var(--blue-dim); background: linear-gradient(135deg, var(--bg2), rgba(55,138,221,0.06)); }
+.final-icon { font-size: 22px; margin-bottom: 8px; }
+.final-title { font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; margin-bottom: 6px; }
+.final-card.gold .final-title { color: var(--amber); }
+.final-card.emerald .final-title { color: var(--green); }
+.final-card.sapphire .final-title { color: var(--blue); }
+.final-desc { font-size: 11px; color: var(--muted2); line-height: 1.6; }
+.upgrade-callout { background: rgba(42,191,176,0.06); border: 1px solid rgba(42,191,176,0.2); border-radius: 8px; padding: 16px 20px; margin-top: 8px; display: flex; gap: 12px; align-items: flex-start; }
+.upgrade-callout-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+.upgrade-callout-text { font-size: 12px; color: var(--teal); line-height: 1.7; }
+.upgrade-callout-text strong { color: var(--teal); font-weight: 600; }
+.status-badge { font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 2px 7px; border-radius: 3px; margin-top: 4px; }
+.status-badge.done { background: rgba(29,158,117,0.1); color: var(--green); border: 1px solid var(--green-dim); }
+.status-badge.active { background: var(--amber-glow); color: var(--amber); border: 1px solid var(--amber-dim); }
+.status-badge.planned { background: var(--bg3); color: var(--muted); border: 1px solid var(--border); }
+@media (max-width: 600px) { .finals { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div class="header-eyebrow">BIMBridge // Project Path</div>
+    <h1>Reconcile <span>&amp; Smart Model</span> Pipeline</h1>
+    <div class="header-sub">From manual mech schedule transcription to a fully automated, self-updating electrical model — with accurate panel schedules, correct load classifications, and BIM-grade device families.</div>
+    <div class="header-meta">
+      <span class="meta-pill">3 phases</span>
+      <span class="meta-pill">4 scripts</span>
+      <span class="meta-pill">1 schema</span>
+      <span class="meta-pill">3 final deliverables</span>
+    </div>
+  </div>
+
+  <div class="section-label">Phase 0 — Foundation (already built)</div>
+  <div class="track">
+    <div class="phase">
+      <div class="phase-card done">
+        <div class="phase-num"><div class="num">0</div><div class="status-badge done">Done</div></div>
+        <div class="phase-body">
+          <div class="phase-tag">Upstream dependency</div>
+          <div class="phase-title">MEP Load Calc — core parser</div>
+          <div class="phase-desc">Flask app that ingests mech/plumbing Excel schedules and produces a structured electrical load calculation workbook. Calculates FLA, VA, MCA per circuit. This is the source of truth the entire reconcile pipeline reads from.</div>
+          <div class="deliverables">
+            <span class="deliverable output">va_summary_combined.xlsx</span>
+            <span class="deliverable output">all_circuits sheet</span>
+            <span class="deliverable output">parse_log sheet</span>
+          </div>
+          <div class="upgrade-callout">
+            <div class="upgrade-callout-icon">⬆</div>
+            <div class="upgrade-callout-text"><strong>Parser upgrade needed before Phase 2:</strong> MEP Load Calc must be extended to capture additional fields — disconnect ownership (NIC / by elec / by mech), emergency/generator power flag, connection type (direct / cord-and-plug / disconnect switch), and VFD-provided-by notes. These fields need to flow into the reconcile write path.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-label">Phase 1 — Reconcile core</div>
+  <div class="track">
+    <div class="phase">
+      <div class="phase-card current">
+        <div class="phase-num"><div class="num">1</div><div class="status-badge active">Now</div></div>
+        <div class="phase-body">
+          <div class="phase-tag">Unblocks everything</div>
+          <div class="phase-title">Define reconcile_schema.json</div>
+          <div class="phase-desc">Lock the JSON handshake format all three scripts share. One device record = one JSON object. Defines every field: Mark, family name, family type, voltage, phase, VA, MCA, OCPD size, disconnect ownership, gen power flag, connection type, load classification, power factor. Until this is done, nothing else can be built.</div>
+          <div class="deliverables"><span class="deliverable config">reconcile_schema.json</span></div>
+          <div class="tasks">
+            <div class="task"><div class="task-dot amber"></div>What fields does the mech schedule on plan need to display?</div>
+            <div class="task"><div class="task-dot amber"></div>What fields does Revit need populated to be BIM-correct?</div>
+            <div class="task"><div class="task-dot amber"></div>Which fields come from MEP Load Calc vs. typed by designer?</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="phase-connector active"></div>
+    <div class="phase">
+      <div class="phase-card future">
+        <div class="phase-num"><div class="num">2</div><div class="status-badge planned">Planned</div></div>
+        <div class="phase-body">
+          <div class="phase-tag">PyRevit script</div>
+          <div class="phase-title">export_revit_devices.py</div>
+          <div class="phase-desc">Queries all Revit electrical devices where For Mech = True. Extracts Mark, family name, family type, and any existing electrical parameters. Serializes to reconcile_export.json using the locked schema.</div>
+          <div class="deliverables"><span class="deliverable script">export_revit_devices.py</span><span class="deliverable file">reconcile_export.json</span></div>
+          <div class="deps"><span class="dep-label">needs:</span><span class="dep active">reconcile_schema.json</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="phase-connector"></div>
+    <div class="phase">
+      <div class="phase-card future">
+        <div class="phase-num"><div class="num">3</div><div class="status-badge planned">Planned</div></div>
+        <div class="phase-body">
+          <div class="phase-tag">Core matching engine</div>
+          <div class="phase-title">reconcile.py</div>
+          <div class="phase-desc">Ingests the Revit device export and MEP Load Calc output. Aligns records by Tag/Mark composite key. Produces four-category mismatch report: Clean, Mismatch, Missing, Orphan. Nothing writes until designer reviews.</div>
+          <div class="deliverables"><span class="deliverable script">reconcile.py</span><span class="deliverable file">mismatch_report.json</span></div>
+          <div class="deps"><span class="dep-label">needs:</span><span class="dep active">reconcile_schema.json</span><span class="dep">reconcile_export.json</span><span class="dep">va_summary_combined.xlsx</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="phase-connector"></div>
+    <div class="phase">
+      <div class="phase-card future">
+        <div class="phase-num"><div class="num">4</div><div class="status-badge planned">Planned</div></div>
+        <div class="phase-body">
+          <div class="phase-tag">PyRevit script</div>
+          <div class="phase-title">write_revit_params.py</div>
+          <div class="phase-desc">Reads confirmed-clean records. Writes voltage, phase, VA, MCA, OCPD size, disconnect ownership, gen power flag, connection type to Revit electrical parameters. Transaction-wrapped. Family type mismatches never auto-write.</div>
+          <div class="deliverables"><span class="deliverable script">write_revit_params.py</span><span class="deliverable output">populated Revit device params</span></div>
+          <div class="deps"><span class="dep-label">needs:</span><span class="dep active">reconcile_schema.json</span><span class="dep">mismatch_report.json</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-label">Phase 2 — Smart model layer</div>
+  <div class="track">
+    <div class="phase">
+      <div class="phase-card future">
+        <div class="phase-num"><div class="num">5</div><div class="status-badge planned">Planned</div></div>
+        <div class="phase-body">
+          <div class="phase-tag">Extends write_revit_params.py</div>
+          <div class="phase-title">Load Classification + Power Factor write</div>
+          <div class="phase-desc">Extend the write script to also set load classification and power factor on the connected Revit ElectricalSystem. Motors get motor classification + NEC PF. HVAC gets HVAC classification. Makes panel schedule demand calcs accurate automatically.</div>
+          <div class="deliverables"><span class="deliverable upgrade">load_classification_map.json</span><span class="deliverable script">write_revit_params.py (extended)</span></div>
+          <div class="deps"><span class="dep-label">needs:</span><span class="dep">write_revit_params.py v1</span><span class="dep">tag prefix → classification map</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="phase-connector"></div>
+    <div class="phase">
+      <div class="phase-card future">
+        <div class="phase-num"><div class="num">6</div><div class="status-badge planned">Planned</div></div>
+        <div class="phase-body">
+          <div class="phase-tag">Family standard</div>
+          <div class="phase-title">Superior For Mech device families</div>
+          <div class="phase-desc">Standard family template with all reconcile target parameters as shared parameters, correct connectors, correct schedule visibility. Replaces patchwork of families missing electrical parameters.</div>
+          <div class="deliverables"><span class="deliverable file">MechEquip_Standard.rfa</span><span class="deliverable config">shared_params_reconcile.txt</span></div>
+          <div class="tasks">
+            <div class="task"><div class="task-dot"></div>Enumerate all parameters reconcile needs to write</div>
+            <div class="task"><div class="task-dot"></div>Build shared parameter file — one GUID per parameter</div>
+            <div class="task"><div class="task-dot"></div>One universal family or per-equipment-type variants?</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="phase-connector"></div>
+    <div class="phase">
+      <div class="phase-card future">
+        <div class="phase-num"><div class="num">7</div><div class="status-badge planned">Planned</div></div>
+        <div class="phase-body">
+          <div class="phase-tag">Schedule output</div>
+          <div class="phase-title">Native Revit mechanical schedule</div>
+          <div class="phase-desc">Replace drafting view annotation schedule with a real Revit schedule pulling directly from device parameters. Tag, panel, circuit #, voltage, phase, MCA, OCPD, disconnect ownership, gen power flag — all live-linked, auto-updating.</div>
+          <div class="deliverables"><span class="deliverable output">Mechanical Equipment Schedule (live Revit)</span><span class="deliverable file">schedule_template.rvt snippet</span></div>
+          <div class="deps"><span class="dep-label">needs:</span><span class="dep">device families with correct params</span><span class="dep">reconcile write path stable</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-label">Final deliverables</div>
+  <div class="finals">
+    <div class="final-card gold">
+      <div class="final-icon">📋</div>
+      <div class="final-title">Smart Mech Schedule</div>
+      <div class="final-desc">Live Revit schedule — no annotations, no manual transcription. Updates automatically when reconcile runs. Shows disconnect ownership, gen power, connection type. Correct every submission.</div>
+    </div>
+    <div class="final-card emerald">
+      <div class="final-icon">⚡</div>
+      <div class="final-title">BIM-Grade Device Families</div>
+      <div class="final-desc">Standard family template with all reconcile parameters as shared params. Correct connectors, correct schedule visibility. Revit has the data it needs to model and calculate correctly.</div>
+    </div>
+    <div class="final-card sapphire">
+      <div class="final-icon">📊</div>
+      <div class="final-title">Accurate Panel Schedules</div>
+      <div class="final-desc">Load classifications and power factors set correctly on every circuit. Demand calcs run on real data. VA totals match the load calc. One-line and panel schedule agree without manual reconciliation.</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
