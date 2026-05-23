@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conduit Fill Calculator — BIMBridge Project Hub</title>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --color-background-primary: #ffffff; --color-background-secondary: #f5f5f3;
+    --color-background-tertiary: #edede9; --color-text-primary: #1a1a18;
+    --color-text-secondary: #6b6b68; --color-text-info: #185FA5;
+    --color-border-primary: #c8c8c4; --color-border-secondary: #ddddd8; --color-border-tertiary: #e8e8e4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-background-primary: #1e1e1c; --color-background-secondary: #2a2a27;
+      --color-background-tertiary: #313130; --color-text-primary: #e8e8e4;
+      --color-text-secondary: #9a9a94; --color-text-info: #7ab8f5;
+      --color-border-primary: #4a4a46; --color-border-secondary: #3a3a37; --color-border-tertiary: #303030;
+    }
+  }
+  html, body { background: var(--color-background-primary); color: var(--color-text-primary); font-family: system-ui, -apple-system, sans-serif; min-height: 100vh; }
+  #root { padding: 0 24px; max-width: 900px; margin: 0 auto; }
+  * { -webkit-font-smoothing: antialiased; }
+  a { color: inherit; } button { font-family: inherit; } code, pre { font-family: ui-monospace, "SF Mono", monospace; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--color-border-secondary); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const ACCENT = "#C97B1A";
+const ACCENT_BG_DARK = "#3D2500";
+const ACCENT_BG_LIGHT = "#FEF3E2";
+
+const P = {
+  name: "Conduit Fill Calculator",
+  emoji: "📐",
+  tagline: "Select a conduit run in Revit, query all assigned wires, calculate total fill percentage against NEC Article 310 conduit fill limits, and flag over-filled or near-limit conduits before they become a field problem.",
+  status: "Planned",
+  statusColor: ACCENT,
+  category: ["BIMBridge", "QC & Validation", "Revit Native"],
+  githubUrl: "https://github.com/bradlittlefield/bimbridge/tree/main/revit/pyBimbridge.extension/Power.panel/ConduitFillCalc.pushbutton",
+  githubFolder: "revit/pyBimbridge.extension/Power.panel/ConduitFillCalc.pushbutton",
+  parentProject: "BIMBridge",
+  parentUrl: "https://github.com/bradlittlefield/bimbridge",
+
+  metrics: [
+    { label: "Effort", value: "Quick" },
+    { label: "Category", value: "BIMBridge" },
+    { label: "Target", value: "pyRevit" },
+    { label: "Phase", value: "Spec" },
+  ],
+
+  techStack: [
+    "IronPython / pyRevit (Python 2.7)",
+    "Revit API: Conduit, MEPCurve",
+    "FilteredElementCollector / OST_Conduit",
+    "NEC Table 4 & 9 embedded as Python dicts",
+    "pyRevit forms.SelectFromList / PickObject",
+    "TaskDialog for in-Revit result display",
+  ],
+
+  files: [
+    { name: "script.py",         size: "—", role: "Main pushbutton — conduit selection, wire collection, fill calc, TaskDialog result display.", lastCommit: "—", commitMsg: "Not yet created", url: "#" },
+    { name: "nec_tables.py",     size: "—", role: "NEC Table 4 (conduit interior areas) and Table 9 (conductor cross-sections) as Python dicts.", lastCommit: "—", commitMsg: "Not yet created", url: "#" },
+    { name: "ConduitFill_Report.xlsx", size: "—", role: "Excel BOM template for batch-mode conduit fill report with pass/warn/fail columns.", lastCommit: "—", commitMsg: "Not yet created", url: "#" },
+    { name: "README.md",         size: "—", role: "Installation, usage, NEC reference, and flags documentation.", lastCommit: "—", commitMsg: "Not yet created", url: "#" },
+  ],
+
+  execSteps: [
+    { n: 1, label: "Conduit select",   detail: "User picks a conduit element in the Revit view via PickObject, or selects from a FilteredElementCollector list of all conduits by mark/system. Read conduit trade size (e.g. 1\") and conduit type (EMT, IMC, RGS) — look up interior area from NEC Table 4 dict.", color: "#185FA5", fill: "#B5D4F4" },
+    { n: 2, label: "Wire collect",     detail: "Query wire elements associated with the conduit via a shared parameter (e.g., Conduit Mark on wire families) or via MEPSystem.Elements. For each wire: read AWG/kcmil size and conductor count. Look up individual conductor area from NEC Table 9 (compact or standard).", color: "#1D9E75", fill: "#9FE1CB" },
+    { n: 3, label: "Fill calc",        detail: "Sum total conductor cross-sectional area. Determine fill limit based on conductor count: 1 wire = 53%, 2 wires = 31%, 3+ wires = 40%. Calculate fill % = (sum of areas) / (conduit interior area) × 100. Apply both general fill and jamming fill checks for three equal-size conductors.", color: "#533AB7", fill: "#CECBF6" },
+    { n: 4, label: "Result display",   detail: "Show TaskDialog with: conduit trade size, conductor count, total fill area (sq in), conduit interior area, fill %, limit %, and pass/warn/fail status. Warn threshold at 35% (near limit), fail at >40%.", color: "#C97B1A", fill: "#FAD99A" },
+    { n: 5, label: "Batch mode",       detail: "Optional: run across all conduits in the model. Collect results into rows: conduit mark, size, type, wire count, fill %, status. Flag over-filled conduits for model view highlighting.", color: "#185FA5", fill: "#B5D4F4" },
+    { n: 6, label: "Excel export",     detail: "For batch mode: export conduit fill BOM to Excel — one row per conduit. Columns: Mark, Trade Size, Type, Wire Count, Fill Area, Interior Area, Fill %, Limit %, Status. Highlight fail rows red, warn rows yellow.", color: "#1D9E75", fill: "#9FE1CB" },
+  ],
+
+  quickStart: [
+    "Open MEP/Electrical host model in Revit with conduit elements placed.",
+    "BIMBridge tab → Power panel → click Conduit Fill Calculator.",
+    "Pick a conduit in the Revit view (or choose from list by mark/system).",
+    "Review TaskDialog: fill %, limit %, pass/warn/fail status.",
+    "For batch mode: choose 'Run All Conduits' — review Excel report.",
+    "Address any fail or warn conduits — upsize conduit or re-route wires.",
+  ],
+
+  relatedTools: [
+    { name: "Wire & Conduit Sizer",              panel: "Power.panel — upstream sizing",         color: "#1D9E75", bg: "#0F3D2820" },
+    { name: "Cable Tray / Conduit BOM",          panel: "Power.panel — quantifies runs",         color: "#185FA5", bg: "#1F3A5220" },
+    { name: "Voltage Drop Checker",              panel: "Power.panel — companion NEC tool",      color: "#533AB7", bg: "#2A1D5E20" },
+    { name: "Code Compliance Snapshot",          panel: "schedules/ — includes fill summary",    color: "#854F0B", bg: "#3D250920" },
+  ],
+
+  knownIssues: [
+    "Wire-to-conduit association requires a shared parameter (Conduit Mark) on wire families — projects without this parameter will require a one-time family standardization pass before the tool can collect wires.",
+    "NEC Table 9 covers standard (non-compact) conductors only in initial implementation — compact conductor areas require a separate lookup table and conductor type flag.",
+    "Jamming fill check (three equal-size conductors >53% single-wire limit) adds complexity to the logic branch — needs explicit test cases before enabling in production.",
+    "Batch model view highlighting (color override for over-filled conduits) depends on OverrideGraphicSettings API and may conflict with existing view filters.",
+  ],
+
+  planned: [
+    { text: "Embed NEC Table 9 conductor areas and Table 4 conduit interior areas as nec_tables.py", done: false },
+    { text: "Scaffold ConduitFillCalc.pushbutton/ folder structure", done: false },
+    { text: "Prototype conduit-to-wire data extraction via shared parameter", done: false },
+    { text: "Build fill calculation logic with 1/2/3+ conductor count branching", done: false },
+    { text: "Implement TaskDialog result display with pass/warn/fail coloring", done: false },
+    { text: "Add batch mode with Excel export and model highlight", done: false },
+    { text: "Add minimum conduit size recommendation for over-filled runs", done: false },
+    { text: "Write README.md with NEC references and usage documentation", done: false },
+  ],
+
+  tasks: [
+    { text: "Confirm wire-to-conduit shared parameter naming convention with team", done: false },
+    { text: "Decide scope: EMT/IMC/RGS only or include PVC and FMC in Table 4 lookup", done: false },
+    { text: "Define warn threshold (35% default) as a user-configurable param", done: false },
+    { text: "Test extraction on a project conduit with mixed AWG sizes", done: false },
+  ],
+};
+
+function useDark() {
+  const [dark, setDark] = useState(() => window.matchMedia("(prefers-color-scheme: dark)").matches);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const h = e => setDark(e.matches);
+    mq.addEventListener("change", h);
+    return () => mq.removeEventListener("change", h);
+  }, []);
+  return dark;
+}
+
+function Badge({ label, color, bg }) {
+  return <span style={{ background: bg, color, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", padding: "3px 10px", borderRadius: 20, textTransform: "uppercase", border: `1px solid ${color}44`, whiteSpace: "nowrap" }}>{label}</span>;
+}
+
+function SectionLabel({ title, count }) {
+  return <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--color-text-secondary)", paddingBottom: 10, display: "flex", alignItems: "center", gap: 8 }}>{title}{count != null && <span style={{ background: "var(--color-background-secondary)", color: "var(--color-text-secondary)", fontSize: 10, padding: "1px 7px", borderRadius: 20 }}>{count}</span>}</div>;
+}
+
+function Collapse({ title, icon, badge, defaultOpen = false, children }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div style={{ border: "0.5px solid var(--color-border-tertiary)", borderRadius: 10, overflow: "hidden", marginBottom: 10 }}>
+      <button onClick={() => setOpen(o => !o)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 16px", background: "var(--color-background-primary)", border: "none", cursor: "pointer" }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)" }}>{icon && <span>{icon}</span>}{title}</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>{badge}<span style={{ color: "var(--color-text-secondary)", fontSize: 11, transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.18s", display: "inline-block" }}>▾</span></span>
+      </button>
+      {open && <div style={{ borderTop: "0.5px solid var(--color-border-tertiary)" }}>{children}</div>}
+    </div>
+  );
+}
+
+function App() {
+  const dark = useDark();
+  const [tab, setTab] = useState("overview");
+  const [tasks, setTasks] = useState(P.tasks);
+  const [planned, setPlanned] = useState(P.planned);
+  const tabs = ["overview", "tasks"];
+  const pillBadge = (n, total, accent) => (
+    <span style={{ fontSize: 10, background: n === total ? `${accent}20` : "var(--color-background-secondary)", color: n === total ? accent : "var(--color-text-secondary)", padding: "2px 8px", borderRadius: 20, fontWeight: 600 }}>{n}/{total}</span>
+  );
+
+  function TaskList({ items, setItems, accent }) {
+    const toggle = i => setItems(prev => prev.map((t, j) => j === i ? { ...t, done: !t.done } : t));
+    return (
+      <div style={{ padding: "4px 16px 10px" }}>
+        {items.map((item, i) => (
+          <div key={i} onClick={() => toggle(i)} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "8px 0", cursor: "pointer", borderBottom: i < items.length - 1 ? "0.5px solid var(--color-border-tertiary)" : "none" }}>
+            <div style={{ width: 15, height: 15, marginTop: 2, border: `1.5px solid ${item.done ? accent : "var(--color-border-secondary)"}`, borderRadius: 3, background: item.done ? accent : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.15s" }}>
+              {item.done && <span style={{ color: "#fff", fontSize: 8 }}>✓</span>}
+            </div>
+            <span style={{ fontSize: 13, color: item.done ? "var(--color-text-secondary)" : "var(--color-text-primary)", textDecoration: item.done ? "line-through" : "none", lineHeight: 1.5 }}>{item.text}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ fontFamily: "system-ui,-apple-system,sans-serif", maxWidth: 680, margin: "0 auto", paddingBottom: 48 }}>
+      <div style={{ margin: "16px 0 0", padding: "10px 16px", borderRadius: 10, background: dark ? `${ACCENT_BG_DARK}40` : ACCENT_BG_LIGHT, border: `0.5px solid ${ACCENT}44`, display: "flex", alignItems: "center", gap: 10 }}>
+        <span style={{ fontSize: 16 }}>🔧</span>
+        <span style={{ fontSize: 12, color: dark ? "#FAD99A" : "#8A4F00", lineHeight: 1.6 }}>
+          <strong>Spec-only — no code yet.</strong> First deliverable: embed NEC Table 4 and Table 9 lookup dicts in nec_tables.py, then scaffold the pushbutton folder and prototype conduit-to-wire extraction.
+        </span>
+      </div>
+
+      <div style={{ paddingTop: 16, paddingBottom: 16, borderBottom: "0.5px solid var(--color-border-tertiary)", marginBottom: 20, marginTop: 16 }}>
+        <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+          <div style={{ width: 52, height: 52, borderRadius: 12, background: dark ? ACCENT_BG_DARK : ACCENT_BG_LIGHT, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, flexShrink: 0, border: `1px solid ${ACCENT}44` }}>{P.emoji}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 4 }}>
+              <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: "var(--color-text-primary)" }}>{P.name}</h1>
+              <Badge label={P.status} color={ACCENT} bg={dark ? ACCENT_BG_DARK : ACCENT_BG_LIGHT} />
+            </div>
+            <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: "0 0 8px", lineHeight: 1.5 }}>{P.tagline}</p>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+              {P.category.map(c => <span key={c} style={{ fontSize: 10, background: "var(--color-background-secondary)", color: "var(--color-text-secondary)", padding: "2px 8px", borderRadius: 20, border: "0.5px solid var(--color-border-tertiary)" }}>{c}</span>)}
+              <a href={P.githubUrl} target="_blank" style={{ fontSize: 11, color: ACCENT, textDecoration: "none", fontWeight: 600, marginLeft: 4 }}>↗ GitHub</a>
+            </div>
+          </div>
+        </div>
+        <div style={{ marginTop: 10, fontSize: 11, color: "var(--color-text-secondary)", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+          <span>Part of</span>
+          <a href={P.parentUrl} target="_blank" style={{ color: "var(--color-text-info)", textDecoration: "none", fontWeight: 600 }}>{P.parentProject} ↗</a>
+          <span style={{ opacity: 0.3 }}>·</span>
+          <code style={{ fontSize: 10, background: "var(--color-background-secondary)", padding: "1px 6px", borderRadius: 4 }}>{P.githubFolder}</code>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", borderBottom: "0.5px solid var(--color-border-tertiary)", marginBottom: 22 }}>
+        {tabs.map(t => (
+          <button key={t} onClick={() => setTab(t)} style={{ background: "none", border: "none", cursor: "pointer", padding: "8px 16px", fontSize: 13, fontWeight: tab === t ? 600 : 400, color: tab === t ? ACCENT : "var(--color-text-secondary)", borderBottom: `2px solid ${tab === t ? ACCENT : "transparent"}`, transition: "all 0.15s" }}>
+            {t.charAt(0).toUpperCase() + t.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {tab === "overview" && (
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--color-text-secondary)", paddingBottom: 10 }}>At a glance</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 22 }}>
+            {P.metrics.map(m => (
+              <div key={m.label} style={{ background: "var(--color-background-secondary)", borderRadius: 10, padding: "12px 14px" }}>
+                <div style={{ fontSize: 10, color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 600, marginBottom: 4 }}>{m.label}</div>
+                <div style={{ fontSize: 22, fontWeight: 700, color: "var(--color-text-primary)", lineHeight: 1 }}>{m.value}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--color-text-secondary)", paddingBottom: 10 }}>Tech stack</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 22 }}>
+            {P.techStack.map(t => <span key={t} style={{ fontSize: 12, padding: "5px 12px", borderRadius: 20, background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-secondary)", color: "var(--color-text-primary)", fontWeight: 500 }}>{t}</span>)}
+          </div>
+          <Collapse title="Open design questions" icon="⚠️" defaultOpen={true} badge={<span style={{ fontSize: 10, background: dark ? "#501313" : "#FCEBEB", color: "#E24B4A", padding: "2px 7px", borderRadius: 20, fontWeight: 600 }}>{P.knownIssues.length}</span>}>
+            <div style={{ padding: "12px 16px" }}>
+              {P.knownIssues.map((issue, i) => (
+                <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "7px 10px", marginBottom: 6, background: dark ? "#50131320" : "#FCEBEB", borderRadius: 8, border: "0.5px solid #E24B4A33" }}>
+                  <span style={{ color: "#E24B4A", flexShrink: 0 }}>⚠</span>
+                  <span style={{ fontSize: 12, color: dark ? "#F09595" : "#A32D2D", lineHeight: 1.6 }}>{issue}</span>
+                </div>
+              ))}
+            </div>
+          </Collapse>
+        </div>
+      )}
+
+      {tab === "tasks" && (
+        <div>
+          <p style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 16, lineHeight: 1.7 }}>Session-only — state resets on reload.</p>
+          <Collapse title="Active tasks" icon="⚡" defaultOpen={true} badge={pillBadge(tasks.filter(t => t.done).length, tasks.length, ACCENT)}>
+            <TaskList items={tasks} setItems={setTasks} accent={ACCENT} />
+          </Collapse>
+          <Collapse title="Build checklist" icon="🔮" defaultOpen={true} badge={pillBadge(planned.filter(t => t.done).length, planned.length, "#185FA5")}>
+            <TaskList items={planned} setItems={setPlanned} accent="#185FA5" />
+          </Collapse>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>
