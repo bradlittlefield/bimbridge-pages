@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Process Guide & Checklist Generator — BIMBridge Project Hub</title>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --color-background-primary: #ffffff; --color-background-secondary: #f5f5f3;
+    --color-background-tertiary: #edede9; --color-text-primary: #1a1a18;
+    --color-text-secondary: #6b6b68; --color-text-info: #185FA5;
+    --color-border-primary: #c8c8c4; --color-border-secondary: #ddddd8; --color-border-tertiary: #e8e8e4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-background-primary: #1e1e1c; --color-background-secondary: #2a2a27;
+      --color-background-tertiary: #313130; --color-text-primary: #e8e8e4;
+      --color-text-secondary: #9a9a94; --color-text-info: #7ab8f5;
+      --color-border-primary: #4a4a46; --color-border-secondary: #3a3a37; --color-border-tertiary: #303030;
+    }
+  }
+  html, body { background: var(--color-background-primary); color: var(--color-text-primary); font-family: system-ui, -apple-system, sans-serif; min-height: 100vh; }
+  #root { padding: 0 24px; max-width: 900px; margin: 0 auto; }
+  * { -webkit-font-smoothing: antialiased; }
+  a { color: inherit; } button { font-family: inherit; } code, pre { font-family: ui-monospace, "SF Mono", monospace; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--color-border-secondary); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const ACCENT = "#C97B1A";
+const ACCENT_BG_DARK = "#3D2500";
+const ACCENT_BG_LIGHT = "#FEF3E2";
+
+const P = {
+  name: "Process Guide & Checklist Generator",
+  emoji: "📃",
+  tagline: "Codify tribal knowledge into structured process guides and checklists for recurring workflows — takes any rough description and transforms it into a polished, step-by-step guide with a corresponding repeatable checklist in minutes.",
+  status: "Planned",
+  statusColor: ACCENT,
+  category: ["AI/LLM", "Workflow", "Automation"],
+  githubUrl: "https://github.com/bradlittlefield/bimbridge/tree/main/ai/process-guide-generator",
+  githubFolder: "ai/process-guide-generator/",
+  parentProject: "BIMBridge",
+  parentUrl: "https://github.com/bradlittlefield/bimbridge",
+
+  metrics: [
+    { label: "Effort", value: "Quick" },
+    { label: "Category", value: "AI/LLM" },
+    { label: "Target", value: "Python" },
+    { label: "Phase", value: "Spec" },
+  ],
+
+  techStack: ["Python 3", "Claude API (claude-sonnet-4-6)", "Notion API", "Markdown", "Clipboard / stdin"],
+
+  files: [
+    { name: "generate.py",      size: "—", role: "Main orchestration script — input loop, Claude call, output formatting.", lastCommit: "—", commitMsg: "Not yet created", url: "#" },
+    { name: "notion_push.py",   size: "—", role: "Notion API client — creates process library pages with property mapping.", lastCommit: "—", commitMsg: "Not yet created", url: "#" },
+    { name: "prompts.py",       size: "—", role: "Claude prompt templates for guide structuring and checklist generation.", lastCommit: "—", commitMsg: "Not yet created", url: "#" },
+    { name: "README.md",        size: "—", role: "Installation, usage, and flags reference.", lastCommit: "—", commitMsg: "Not yet created", url: "#" },
+  ],
+
+  execSteps: [
+    { n: 1, label: "Process input",      detail: "User describes the process in any form: rough paragraph, bullet list, or pasted transcript. Script prompts for process name, context/audience, and desired output format (numbered guide vs. checklist vs. both).", color: "#185FA5", fill: "#B5D4F4" },
+    { n: 2, label: "Claude structuring", detail: "Claude receives the description and restructures it into: (1) a brief overview of what the process accomplishes, (2) prerequisites/materials needed, (3) numbered step-by-step guide with clear action verbs, (4) a parallel checkbox checklist for execution.", color: "#1D9E75", fill: "#9FE1CB" },
+    { n: 3, label: "Output formatting",  detail: "Structured output is rendered in Markdown with consistent heading hierarchy. Steps are written in imperative voice with concrete actions. Conditional branches are flagged clearly (\"If X, go to step Y\").", color: "#533AB7", fill: "#CECBF6" },
+    { n: 4, label: "Notion push",        detail: "Script creates a new page in a designated \"Process Library\" Notion database with properties: Process Name, Category, Date Created, Owner. Content blocks include overview, prerequisites, numbered steps, and checkbox checklist.", color: "#C97B1A", fill: "#FAD99A" },
+    { n: 5, label: "Category tagging",   detail: "Process page is tagged by category (Engineering, Admin, QC, Onboarding) for filtering and discovery in the Notion process library. Tags drive filtered views.", color: "#854F0B", fill: "#FAC775" },
+    { n: 6, label: "Version history",    detail: "Existing process pages can be versioned: old content is archived to a child block, new content replaces the parent. Version log property tracks revision date and author.", color: "#185FA5", fill: "#B5D4F4" },
+  ],
+
+  quickStart: [
+    "Install dependencies: pip install anthropic requests.",
+    "Set ANTHROPIC_API_KEY and NOTION_TOKEN environment variables.",
+    "Run: python generate.py and enter your process name and description.",
+    "Select output format: numbered guide, checklist, or both.",
+    "Review the Markdown output in the terminal.",
+    "Confirm Notion push to create the process library page.",
+  ],
+
+  relatedTools: [
+    { name: "Recurring Doc Template Builder", panel: "ai/ — companion for document-based processes", color: "#1D9E75", bg: "#0F3D2820" },
+    { name: "Drawing Review Checklist",       panel: "ai/ — specialized checklist for drawings",    color: "#185FA5", bg: "#1F3A5220" },
+    { name: "Chief of Staff Copilot",         panel: "ai/ — consumes process guides for onboarding",color: "#854F0B", bg: "#3D250920" },
+    { name: "RFI & Change Order Tracker",     panel: "ai/ — sibling automation tool",               color: "#533AB7", bg: "#2A1D5E20" },
+  ],
+
+  knownIssues: [
+    "Claude prompt for conditional branching notation not yet designed — need to test how well the model captures if/else workflow logic from unstructured input.",
+    "Notion process library database schema not yet created — need to define required properties before the push script can be built.",
+    "Batch generation from a list of process descriptions requires a queue/retry pattern that has not been scoped.",
+  ],
+
+  planned: [
+    { text: "Write and test Claude prompt for process structuring", done: false },
+    { text: "Build input loop (name + description + format preference)", done: false },
+    { text: "Implement Notion page creation with property mapping", done: false },
+    { text: "Test with 3 real office processes", done: false },
+    { text: "Create 'Process Library' Notion database template", done: false },
+    { text: "Add category tagging and filter views in Notion", done: false },
+    { text: "Add version history on process pages", done: false },
+    { text: "Write README.md with usage and flags reference", done: false },
+  ],
+
+  tasks: [
+    { text: "Design Claude prompt for process structuring with conditional branches", done: false },
+    { text: "Define Notion process library database schema and properties", done: false },
+    { text: "Decide primary output: Markdown file vs. Notion page vs. both", done: false },
+    { text: "Test batch generation approach with a list of process descriptions", done: false },
+  ],
+};
+
+function useDark() {
+  const [dark, setDark] = useState(() => window.matchMedia("(prefers-color-scheme: dark)").matches);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const h = e => setDark(e.matches);
+    mq.addEventListener("change", h);
+    return () => mq.removeEventListener("change", h);
+  }, []);
+  return dark;
+}
+
+function Badge({ label, color, bg }) {
+  return <span style={{ background: bg, color, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", padding: "3px 10px", borderRadius: 20, textTransform: "uppercase", border: `1px solid ${color}44`, whiteSpace: "nowrap" }}>{label}</span>;
+}
+
+function SectionLabel({ title, count }) {
+  return <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--color-text-secondary)", paddingBottom: 10, display: "flex", alignItems: "center", gap: 8 }}>{title}{count != null && <span style={{ background: "var(--color-background-secondary)", color: "var(--color-text-secondary)", fontSize: 10, padding: "1px 7px", borderRadius: 20 }}>{count}</span>}</div>;
+}
+
+function Collapse({ title, icon, badge, defaultOpen = false, children }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div style={{ border: "0.5px solid var(--color-border-tertiary)", borderRadius: 10, overflow: "hidden", marginBottom: 10 }}>
+      <button onClick={() => setOpen(o => !o)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 16px", background: "var(--color-background-primary)", border: "none", cursor: "pointer" }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)" }}>{icon && <span>{icon}</span>}{title}</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>{badge}<span style={{ color: "var(--color-text-secondary)", fontSize: 11, transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.18s", display: "inline-block" }}>▾</span></span>
+      </button>
+      {open && <div style={{ borderTop: "0.5px solid var(--color-border-tertiary)" }}>{children}</div>}
+    </div>
+  );
+}
+
+function CircuitMap({ dark }) {
+  const [hovered, setHovered] = useState(null);
+  const C = {
+    blue:   { stroke: "#378ADD", fill: dark ? "#0C447C" : "#E6F1FB", text: dark ? "#B5D4F4" : "#185FA5" },
+    purple: { stroke: "#7F77DD", fill: dark ? "#3C3489" : "#EEEDFE", text: dark ? "#CECBF6" : "#533AB7" },
+    amber:  { stroke: "#BA7517", fill: dark ? "#633806" : "#FAEEDA", text: dark ? "#FAC775" : "#854F0B" },
+    orange: { stroke: "#C97B1A", fill: dark ? "#3D2500" : "#FEF3E2", text: dark ? "#FAD99A" : "#8A4F00" },
+    green:  { stroke: "#1D9E75", fill: dark ? "#085041" : "#E1F5EE", text: dark ? "#9FE1CB" : "#0F6E56" },
+    gray:   { stroke: "#888780", fill: dark ? "#444441" : "#F1EFE8", text: dark ? "#D3D1C7" : "#5F5E5A" },
+    wire:        dark ? "#555" : "#bbb",
+    grid:        dark ? "rgba(255,255,255,0.035)" : "rgba(0,0,0,0.045)",
+    tipBg:       dark ? "#2C2C2A" : "#fff",
+    tipBorder:   dark ? "#444" : "#ccc",
+    tipText:     dark ? "#D3D1C7" : "#3d3d3a",
+    legendBg:    dark ? "#242422" : "#F8F8F6",
+    legendBorder: dark ? "#3a3a38" : "#d0d0c8",
+  };
+  const nodes = [
+    { id: "repo",       x: 310, y: 28,  w: 200, h: 38, label: "bimbridge repo",              c: "blue",   tip: "GitHub source of truth — all scripts, docs, templates." },
+    { id: "revit",      x: 30,  y: 120, w: 150, h: 34, label: "revit/",                      c: "gray",   tip: "All pyRevit extension tools." },
+    { id: "ai",         x: 560, y: 120, w: 150, h: 34, label: "ai/",                         c: "blue",   tip: "AI/LLM Python scripts and automation tools.", },
+    { id: "pg",         x: 370, y: 212, w: 210, h: 34, label: "process-guide-generator/",    c: "orange", tip: "⭐ YOU ARE HERE · Status: Planned", active: true },
+    { id: "rd",         x: 590, y: 212, w: 185, h: 34, label: "recurring-doc-builder/",      c: "gray",   tip: "Recurring Document Template Builder · Planned" },
+    { id: "rfi",        x: 155, y: 212, w: 185, h: 34, label: "rfi-co-tracker/",             c: "gray",   tip: "RFI & Change Order Tracker · Planned" },
+    { id: "agenda",     x: 15,  y: 212, w: 120, h: 34, label: "daily-agenda/",               c: "gray",   tip: "Daily Agenda Generator · Planned" },
+  ];
+  const nm = {}; nodes.forEach(n => nm[n.id] = n);
+  const cx  = id => nm[id].x + nm[id].w / 2;
+  const bot = id => nm[id].y + nm[id].h;
+  const top = id => nm[id].y;
+  const edges = [
+    { f: "repo",  t: "revit",  active: false },
+    { f: "repo",  t: "ai",     active: true  },
+    { f: "ai",    t: "pg",     active: true  },
+    { f: "ai",    t: "rd",     active: false },
+    { f: "ai",    t: "rfi",    active: false },
+    { f: "ai",    t: "agenda", active: false },
+  ];
+  const SVG_W = 820;
+  const SVG_H = 340;
+  const legendY = 248;
+  const legendItems = [
+    { c: "blue",   label: "Core / structure" },
+    { c: "orange", label: "Planned tool" },
+    { c: "gray",   label: "Stable / other" },
+  ];
+  return (
+    <div style={{ position: "relative", background: dark ? "#1a1a18" : "#fafaf8", borderRadius: 12 }}>
+      <svg width="100%" viewBox={`0 0 ${SVG_W} ${SVG_H}`} style={{ display: "block" }}>
+        <defs>
+          <marker id="arrowOrange" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" fill="none" stroke={ACCENT} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </marker>
+          <marker id="arrowGray" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" fill="none" stroke={C.wire} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </marker>
+          <marker id="arrowHover" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="#378ADD" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </marker>
+        </defs>
+        {Array.from({ length: 18 }, (_, i) => <line key={`v${i}`} x1={i * 48} y1={0} x2={i * 48} y2={SVG_H} stroke={C.grid} strokeWidth="1" />)}
+        {Array.from({ length: 8 }, (_, i) => <line key={`h${i}`} x1={0} y1={i * 48} x2={SVG_W} y2={i * 48} stroke={C.grid} strokeWidth="1" />)}
+        {edges.map(({ f, t, active }, i) => {
+          const fx = cx(f), fy = bot(f), ttx = cx(t), tty = top(t);
+          const mid = Math.round((fy + tty) / 2);
+          const hovering = hovered === f || hovered === t;
+          const stroke = hovering ? "#378ADD" : active ? ACCENT : C.wire;
+          const markerId = hovering ? "arrowHover" : active ? "arrowOrange" : "arrowGray";
+          const d = `M ${fx} ${fy} L ${fx} ${mid} L ${ttx} ${mid} L ${ttx} ${tty}`;
+          return (
+            <g key={`${f}-${t}-${i}`}>
+              {active && !hovering && <path d={d} fill="none" stroke={ACCENT} strokeWidth="5" opacity="0.07" strokeLinecap="round" />}
+              <path d={d} fill="none" stroke={stroke} strokeWidth={hovering ? 2 : active ? 1.6 : 0.8} strokeLinecap="round" markerEnd={`url(#${markerId})`} opacity={hovering ? 1 : active ? 0.85 : 0.55} />
+              <circle cx={fx} cy={fy} r="3" fill={hovering ? "#378ADD" : active ? ACCENT : C.wire} opacity={hovering ? 1 : active ? 0.8 : 0.45} />
+            </g>
+          );
+        })}
+        {nodes.map(n => {
+          const col = C[n.c]; const isHov = hovered === n.id;
+          return (
+            <g key={n.id} style={{ cursor: "pointer" }} onMouseEnter={() => setHovered(n.id)} onMouseLeave={() => setHovered(null)}>
+              {n.active && <rect x={n.x - 6} y={n.y - 6} width={n.w + 12} height={n.h + 12} rx={11} fill="none" stroke={ACCENT} strokeWidth="1.5" strokeDasharray="6 3" opacity="0.8" />}
+              <rect x={n.x} y={n.y} width={n.w} height={n.h} rx={7} fill={isHov ? col.stroke : col.fill} stroke={col.stroke} strokeWidth={n.active ? 1.5 : 0.75} style={{ transition: "fill 0.15s" }} />
+              <text x={n.x + n.w / 2} y={n.y + n.h / 2} textAnchor="middle" dominantBaseline="central" fontSize="11" fontWeight={n.active ? "700" : "500"} fill={isHov ? "#fff" : col.text} fontFamily="system-ui,sans-serif" style={{ userSelect: "none", pointerEvents: "none" }}>{n.label}</text>
+              {n.active && !isHov && <circle cx={n.x + n.w - 10} cy={n.y + 10} r="4" fill={ACCENT} />}
+            </g>
+          );
+        })}
+        <rect x={16} y={legendY} width={178} height={72} rx={8} fill={C.legendBg} stroke={C.legendBorder} strokeWidth="0.75" />
+        <text x={28} y={legendY + 16} fontSize="9" fontWeight="700" letterSpacing="0.1em" fill={dark ? "#777" : "#999"} fontFamily="system-ui,sans-serif">LEGEND</text>
+        {legendItems.map((item, i) => {
+          const col = C[item.c];
+          return (
+            <g key={i}>
+              <rect x={28} y={legendY + 24 + i * 12} width={10} height={10} rx={2} fill={col.fill} stroke={col.stroke} strokeWidth="0.85" />
+              <text x={44} y={legendY + 32 + i * 12} fontSize="10" fill={dark ? "#B4B2A9" : "#5F5E5A"} fontFamily="system-ui,sans-serif">{item.label}</text>
+            </g>
+          );
+        })}
+      </svg>
+      {hovered && nm[hovered] && (
+        <div style={{ position: "absolute", bottom: 10, left: "50%", transform: "translateX(-50%)", background: C.tipBg, border: `0.5px solid ${C.tipBorder}`, borderRadius: 8, padding: "7px 14px", fontSize: 12, color: C.tipText, pointerEvents: "none", whiteSpace: "nowrap", zIndex: 10 }}>
+          {nm[hovered].tip}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ExecFlow() {
+  const [active, setActive] = useState(null);
+  const steps = P.execSteps;
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 0, marginBottom: 14, position: "relative" }}>
+        {steps.map((s, i) => (
+          <div key={s.n} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
+            {i < steps.length - 1 && <div style={{ position: "absolute", top: 15, left: "50%", width: "100%", height: 2, background: active === s.n || active === steps[i + 1]?.n ? s.color : "var(--color-border-tertiary)", transition: "background 0.2s", zIndex: 0 }} />}
+            <button onClick={() => setActive(active === s.n ? null : s.n)} style={{ width: 30, height: 30, borderRadius: "50%", background: active === s.n ? s.color : s.fill, border: `2px solid ${s.color}`, cursor: "pointer", zIndex: 1, position: "relative", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: active === s.n ? "#fff" : s.color, transition: "background 0.15s, color 0.15s" }}>{s.n}</button>
+            <span style={{ fontSize: 9, fontWeight: 600, color: active === s.n ? s.color : "var(--color-text-secondary)", marginTop: 5, textAlign: "center", maxWidth: 76, lineHeight: 1.3 }}>{s.label}</span>
+          </div>
+        ))}
+      </div>
+      {active ? (() => {
+        const s = steps.find(x => x.n === active);
+        return (
+          <div style={{ background: "var(--color-background-secondary)", border: `1px solid ${s.color}44`, borderRadius: 10, padding: "12px 16px", display: "flex", gap: 12, alignItems: "flex-start" }}>
+            <div style={{ width: 26, height: 26, borderRadius: "50%", background: s.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0 }}>{s.n}</div>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: s.color, marginBottom: 4 }}>Step {s.n} — {s.label}</div>
+              <div style={{ fontSize: 12, color: "var(--color-text-primary)", lineHeight: 1.7 }}>{s.detail}</div>
+            </div>
+          </div>
+        );
+      })() : <div style={{ fontSize: 11, color: "var(--color-text-secondary)", textAlign: "center", padding: "6px 0" }}>tap a step to expand</div>}
+    </div>
+  );
+}
+
+function FileManifest({ dark }) {
+  const icons = { ".py": "🐍", ".xlsx": "📊", ".md": "📝", ".bat": "⚙️", ".json": "📄", ".txt": "📋" };
+  const getIcon = name => {
+    for (const [ext, icon] of Object.entries(icons)) if (name.includes(ext)) return icon;
+    return "📁";
+  };
+  return (
+    <div>
+      {P.files.map((f, i) => (
+        <div key={f.name} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 0", borderBottom: i < P.files.length - 1 ? "0.5px solid var(--color-border-tertiary)" : "none" }}>
+          <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>{getIcon(f.name)}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", fontFamily: "monospace" }}>{f.name}</span>
+              <span style={{ fontSize: 10, color: ACCENT, background: dark ? `${ACCENT_BG_DARK}60` : ACCENT_BG_LIGHT, padding: "1px 7px", borderRadius: 20, border: `0.5px solid ${ACCENT}44` }}>not yet created</span>
+            </div>
+            <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 2, lineHeight: 1.5 }}>{f.role}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function QuickStart() {
+  const [done, setDone] = useState(Array(P.quickStart.length).fill(false));
+  const toggle = i => setDone(prev => prev.map((v, j) => j === i ? !v : v));
+  const reset = () => setDone(Array(P.quickStart.length).fill(false));
+  const n = done.filter(Boolean).length;
+  const all = n === P.quickStart.length;
+  return (
+    <div>
+      <div style={{ background: "var(--color-background-tertiary)", borderRadius: 10, padding: "14px 16px", marginBottom: 10, border: "0.5px solid var(--color-border-tertiary)" }}>
+        <div style={{ color: ACCENT, marginBottom: 8, fontSize: 10, fontFamily: "monospace", fontWeight: 700 }}>// {P.name} — planned run checklist</div>
+        {P.quickStart.map((step, i) => (
+          <div key={i} onClick={() => toggle(i)} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "5px 0", cursor: "pointer", borderBottom: i < P.quickStart.length - 1 ? "0.5px solid var(--color-border-tertiary)" : "none" }}>
+            <span style={{ color: done[i] ? ACCENT : "var(--color-text-secondary)", flexShrink: 0, fontWeight: 700, fontSize: 12, marginTop: 1, fontFamily: "monospace" }}>{done[i] ? "✓" : `${i + 1}.`}</span>
+            <span style={{ fontSize: 12, color: done[i] ? "var(--color-text-secondary)" : "var(--color-text-primary)", textDecoration: done[i] ? "line-through" : "none", lineHeight: 1.6 }}>{step}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        {all ? <span style={{ fontSize: 12, color: ACCENT, fontWeight: 600 }}>✓ All steps complete</span>
+              : <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{n} / {P.quickStart.length} steps</span>}
+        <button onClick={reset} style={{ fontSize: 11, color: "var(--color-text-secondary)", background: "none", border: "0.5px solid var(--color-border-tertiary)", borderRadius: 6, padding: "3px 10px", cursor: "pointer" }}>reset</button>
+      </div>
+    </div>
+  );
+}
+
+function TaskList({ items, setItems, accent }) {
+  const toggle = i => setItems(prev => prev.map((t, j) => j === i ? { ...t, done: !t.done } : t));
+  return (
+    <div style={{ padding: "4px 16px 10px" }}>
+      {items.map((item, i) => (
+        <div key={i} onClick={() => toggle(i)} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "8px 0", cursor: "pointer", borderBottom: i < items.length - 1 ? "0.5px solid var(--color-border-tertiary)" : "none" }}>
+          <div style={{ width: 15, height: 15, marginTop: 2, border: `1.5px solid ${item.done ? accent : "var(--color-border-secondary)"}`, borderRadius: 3, background: item.done ? accent : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.15s" }}>
+            {item.done && <span style={{ color: "#fff", fontSize: 8 }}>✓</span>}
+          </div>
+          <span style={{ fontSize: 13, color: item.done ? "var(--color-text-secondary)" : "var(--color-text-primary)", textDecoration: item.done ? "line-through" : "none", lineHeight: 1.5 }}>{item.text}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function App() {
+  const dark = useDark();
+  const [tab, setTab] = useState("overview");
+  const [tasks, setTasks] = useState(P.tasks);
+  const [planned, setPlanned] = useState(P.planned);
+  const tabs = ["overview", "circuit", "tasks"];
+  const pillBadge = (n, total, accent) => (
+    <span style={{ fontSize: 10, background: n === total ? `${accent}20` : "var(--color-background-secondary)", color: n === total ? accent : "var(--color-text-secondary)", padding: "2px 8px", borderRadius: 20, fontWeight: 600 }}>{n}/{total}</span>
+  );
+
+  return (
+    <div style={{ fontFamily: "system-ui,-apple-system,sans-serif", maxWidth: 680, margin: "0 auto", paddingBottom: 48 }}>
+
+      <div style={{ margin: "16px 0 0", padding: "10px 16px", borderRadius: 10, background: dark ? `${ACCENT_BG_DARK}40` : ACCENT_BG_LIGHT, border: `0.5px solid ${ACCENT}44`, display: "flex", alignItems: "center", gap: 10 }}>
+        <span style={{ fontSize: 16 }}>🔧</span>
+        <span style={{ fontSize: 12, color: dark ? "#FAD99A" : "#8A4F00", lineHeight: 1.6 }}>
+          <strong>Spec-only — no code yet.</strong> First deliverable: write and test the Claude prompt for process structuring, then scaffold the ai/process-guide-generator/ folder.
+        </span>
+      </div>
+
+      <div style={{ paddingTop: 16, paddingBottom: 16, borderBottom: "0.5px solid var(--color-border-tertiary)", marginBottom: 20, marginTop: 16 }}>
+        <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+          <div style={{ width: 52, height: 52, borderRadius: 12, background: dark ? ACCENT_BG_DARK : ACCENT_BG_LIGHT, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, flexShrink: 0, border: `1px solid ${ACCENT}44` }}>{P.emoji}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 4 }}>
+              <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: "var(--color-text-primary)" }}>{P.name}</h1>
+              <Badge label={P.status} color={ACCENT} bg={dark ? ACCENT_BG_DARK : ACCENT_BG_LIGHT} />
+            </div>
+            <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: "0 0 8px", lineHeight: 1.5 }}>{P.tagline}</p>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+              {P.category.map(c => <span key={c} style={{ fontSize: 10, background: "var(--color-background-secondary)", color: "var(--color-text-secondary)", padding: "2px 8px", borderRadius: 20, border: "0.5px solid var(--color-border-tertiary)" }}>{c}</span>)}
+              <a href={P.githubUrl} target="_blank" style={{ fontSize: 11, color: ACCENT, textDecoration: "none", fontWeight: 600, marginLeft: 4 }}>↗ GitHub</a>
+            </div>
+          </div>
+        </div>
+        <div style={{ marginTop: 10, fontSize: 11, color: "var(--color-text-secondary)", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+          <span>Part of</span>
+          <a href={P.parentUrl} target="_blank" style={{ color: "var(--color-text-info)", textDecoration: "none", fontWeight: 600 }}>{P.parentProject} ↗</a>
+          <span style={{ opacity: 0.3 }}>·</span>
+          <code style={{ fontSize: 10, background: "var(--color-background-secondary)", padding: "1px 6px", borderRadius: 4 }}>{P.githubFolder}</code>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", borderBottom: "0.5px solid var(--color-border-tertiary)", marginBottom: 22 }}>
+        {tabs.map(t => (
+          <button key={t} onClick={() => setTab(t)} style={{ background: "none", border: "none", cursor: "pointer", padding: "8px 16px", fontSize: 13, fontWeight: tab === t ? 600 : 400, color: tab === t ? ACCENT : "var(--color-text-secondary)", borderBottom: `2px solid ${tab === t ? ACCENT : "transparent"}`, transition: "all 0.15s" }}>
+            {t === "circuit" ? "Circuit Map" : t.charAt(0).toUpperCase() + t.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {tab === "overview" && (
+        <div>
+          <SectionLabel title="At a glance" />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 22 }}>
+            {P.metrics.map(m => (
+              <div key={m.label} style={{ background: "var(--color-background-secondary)", borderRadius: 10, padding: "12px 14px" }}>
+                <div style={{ fontSize: 10, color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 600, marginBottom: 4 }}>{m.label}</div>
+                <div style={{ fontSize: 22, fontWeight: 700, color: "var(--color-text-primary)", lineHeight: 1 }}>{m.value}</div>
+              </div>
+            ))}
+          </div>
+
+          <SectionLabel title="Tech stack" />
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 22 }}>
+            {P.techStack.map(t => <span key={t} style={{ fontSize: 12, padding: "5px 12px", borderRadius: 20, background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-secondary)", color: "var(--color-text-primary)", fontWeight: 500 }}>{t}</span>)}
+          </div>
+
+          <SectionLabel title="Execution flow — click any step" />
+          <div style={{ marginBottom: 22 }}><ExecFlow /></div>
+
+          <SectionLabel title="Quick-start checklist" />
+          <div style={{ marginBottom: 22 }}><QuickStart /></div>
+
+          <SectionLabel title="Planned file manifest" count={P.files.length} />
+          <div style={{ border: "0.5px solid var(--color-border-tertiary)", borderRadius: 10, padding: "0 16px", marginBottom: 22 }}>
+            <FileManifest dark={dark} />
+          </div>
+
+          <SectionLabel title="Dependencies in BIMBridge" />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8, marginBottom: 22 }}>
+            {P.relatedTools.map(tool => (
+              <div key={tool.name} style={{ background: tool.bg, border: `0.5px solid ${tool.color}44`, borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 18 }}>🔧</span>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: tool.color }}>{tool.name}</div>
+                  <div style={{ fontSize: 10, color: tool.color, opacity: 0.7, marginTop: 1 }}>{tool.panel}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <Collapse title="Open design questions" icon="⚠️" defaultOpen={true} badge={<span style={{ fontSize: 10, background: dark ? "#501313" : "#FCEBEB", color: "#E24B4A", padding: "2px 7px", borderRadius: 20, fontWeight: 600 }}>{P.knownIssues.length}</span>}>
+            <div style={{ padding: "12px 16px" }}>
+              {P.knownIssues.map((issue, i) => (
+                <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "7px 10px", marginBottom: 6, background: dark ? "#50131320" : "#FCEBEB", borderRadius: 8, border: "0.5px solid #E24B4A33" }}>
+                  <span style={{ color: "#E24B4A", flexShrink: 0 }}>⚠</span>
+                  <span style={{ fontSize: 12, color: dark ? "#F09595" : "#A32D2D", lineHeight: 1.6 }}>{issue}</span>
+                </div>
+              ))}
+            </div>
+          </Collapse>
+        </div>
+      )}
+
+      {tab === "circuit" && (
+        <div>
+          <p style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 12, lineHeight: 1.7 }}>
+            Repo position + internal module pipeline. Hover any node to see details. Orange dashed ring = this project.
+          </p>
+          <CircuitMap dark={dark} />
+          <div style={{ marginTop: 10, fontSize: 11, color: "var(--color-text-secondary)" }}>
+            Planned path: <code style={{ fontSize: 10, background: "var(--color-background-secondary)", padding: "1px 6px", borderRadius: 4 }}>{P.githubFolder}</code>
+          </div>
+        </div>
+      )}
+
+      {tab === "tasks" && (
+        <div>
+          <p style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 16, lineHeight: 1.7 }}>Session-only — state resets on reload. Use the Notion page for persistence.</p>
+          <Collapse title="Active tasks" icon="⚡" defaultOpen={true} badge={pillBadge(tasks.filter(t => t.done).length, tasks.length, ACCENT)}>
+            <TaskList items={tasks} setItems={setTasks} accent={ACCENT} />
+          </Collapse>
+          <Collapse title="Build checklist" icon="🔮" defaultOpen={true} badge={pillBadge(planned.filter(t => t.done).length, planned.length, "#185FA5")}>
+            <TaskList items={planned} setItems={setPlanned} accent="#185FA5" />
+          </Collapse>
+        </div>
+      )}
+
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>
